@@ -1,13 +1,22 @@
 import { PrismaClient, Role } from '@prisma/client';
+import { PrismaNeon } from '@prisma/adapter-neon';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
 import * as bcrypt from 'bcrypt';
 
 /**
  * Seeds the first ADMIN user from environment variables. Idempotent: running
  * it again updates the password of the existing admin rather than failing.
  *
- *   ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=long-password pnpm --filter @trimly/api db:seed
+ *   pnpm --filter @trimly/api db:seed
+ *
+ * Uses the Neon serverless driver (WebSockets on 443) for the same reason as
+ * PrismaService — so it runs from networks that firewall raw TCP 5432.
  */
-const prisma = new PrismaClient();
+neonConfig.webSocketConstructor = ws;
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter: new PrismaNeon(pool) });
 
 async function main(): Promise<void> {
   const email = process.env.ADMIN_EMAIL;
@@ -39,5 +48,5 @@ main()
     process.exitCode = 1;
   })
   .finally(() => {
-    void prisma.$disconnect();
+    void prisma.$disconnect().then(() => pool.end());
   });

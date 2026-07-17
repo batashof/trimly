@@ -57,3 +57,13 @@ Detailed architecture — `notifications-telegram.md`.
 **Why:** The project is a portfolio piece; English is the standard language for code and technical documentation in the industry the user is targeting, and it keeps the repository consistent for any future collaborator or reviewer who doesn't read Russian.
 
 **Alternatives considered:** Keep documentation in Russian with English-only code (rejected — inconsistent, mixes languages within the same repository); maintain bilingual docs (rejected — doubles maintenance effort for no benefit at this stage).
+
+## 2026-07-18 — Neon serverless driver adapter for Postgres
+
+**Decision:** Prisma connects to Neon through the serverless driver adapter (`@prisma/adapter-neon` + `@neondatabase/serverless` over WebSockets on port 443) instead of the default TCP driver on port 5432. Applied in both `PrismaService` (runtime) and `prisma/seed.ts`. Enabled via `previewFeatures = ["driverAdapters"]` in the Prisma schema. The `db:seed` script now runs through `prisma db seed` so `.env` is loaded.
+
+**Why:** The local development network firewalls raw TCP 5432, so the default driver can't reach Neon (`P1001`). The serverless driver tunnels Postgres over HTTPS/443, which the firewall allows, and is fully supported on Render/production too — so the same code path works everywhere. Verified end-to-end locally: login, and barber list/create/delete round-trips against Neon succeed.
+
+**Limitation:** Prisma Migrate (`migrate dev`/`deploy`) still uses the direct TCP connection (`DIRECT_URL`, 5432) and does **not** go through the adapter, so migrations can't be run from a network that blocks 5432 — run them from Render/CI or an unfirewalled network. Runtime queries and seeding are unaffected.
+
+**Alternatives considered:** Keep the plain TCP driver (rejected — unrunnable on the local network); run a local Postgres and sync (rejected — extra moving part, diverges from the Neon-backed production setup).

@@ -3,7 +3,8 @@
 // storage, notifyToken vs booking.id, etc.).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
