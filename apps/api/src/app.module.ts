@@ -3,6 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
+import { BarbersModule } from './barbers/barbers.module';
+import { ServicesModule } from './services/services.module';
+import { WorkingHoursModule } from './working-hours/working-hours.module';
+import { DayOffsModule } from './day-offs/day-offs.module';
 
 @Module({
   imports: [
@@ -10,6 +14,10 @@ import { AuthModule } from './auth/auth.module';
     PrismaModule,
     HealthModule,
     AuthModule,
+    BarbersModule,
+    ServicesModule,
+    WorkingHoursModule,
+    DayOffsModule,
   ],
 })
 export class AppModule {}
