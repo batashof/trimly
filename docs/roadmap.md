@@ -1,19 +1,19 @@
-# Роадмап
+# Roadmap
 
-1. Настройка монорепо (Turborepo), Prisma-схема, миграции на Neon
-2. Backend: auth (JWT, роль ADMIN), CRUD барберов/услуг/расписания/выходных
-3. Backend: логика доступности слотов + создание записи + защита от double booking (`business-logic.md`)
-4. Backend: Telegram-бот — регистрация через BotFather, webhook-эндпоинт, deep-link flow, отправка подтверждения (`notifications-telegram.md`)
-5. Frontend: публичная страница записи (выбор барбера → услуги → слота → форма → экран подтверждения с кнопкой Telegram)
-6. Frontend: админ-панель (список записей с фильтрами, управление расписанием, услугами, барберами)
-7. Деплой: Vercel (web) + Render (api) + пингер для api (`architecture.md`)
-8. Полировка UI, базовые unit-тесты на слот-логику и double booking
+1. Monorepo setup (Turborepo), Prisma schema, migrations on Neon
+2. Backend: auth (JWT, ADMIN role), CRUD for barbers/services/schedule/days off
+3. Backend: slot availability logic + booking creation + double booking protection (`business-logic.md`)
+4. Backend: Telegram bot — registration via BotFather, webhook endpoint, deep link flow, sending confirmations (`notifications-telegram.md`)
+5. Frontend: public booking page (choose barber → service → slot → form → confirmation screen with Telegram button)
+6. Frontend: admin panel (booking list with filters, schedule management, services, barbers)
+7. Deployment: Vercel (web) + Render (api) + pinger for the api (`architecture.md`)
+8. UI polish, basic unit tests for slot logic and double booking
 
-## Осознанно вне MVP (но заложено в архитектуру, не мешает добавить позже)
+## Deliberately out of scope for the MVP (but accounted for in the architecture, doesn't block adding later)
 
-- Напоминание клиенту за N часов до визита (cron + существующий Telegram-flow)
-- Уведомление об отмене записи через бота
-- Подтверждение записи барбером (`PENDING`-статус) — пока авто-подтверждение
-- Роль `BARBER` с отдельным логином (модель это уже допускает)
-- Онлайн-оплата/депозит за запись
-- Мультишоп (несколько барбершопов в одном инстансе) — сейчас один шоп, несколько барберов внутри
+- Reminder to the client N hours before the appointment (cron + existing Telegram flow)
+- Booking cancellation notification via the bot
+- Booking confirmation by the barber (`PENDING` status) — auto-confirm for now
+- `BARBER` role with a separate login (the model already allows this)
+- Online payment/deposit for a booking
+- Multi-shop (several barbershops in one instance) — currently one shop, multiple barbers within it

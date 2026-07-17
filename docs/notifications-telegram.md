@@ -1,35 +1,35 @@
-# Уведомления клиентам через Telegram
+# Client Notifications via Telegram
 
-## Почему так
+## Why this approach
 
-Клиенту нужно уведомление о записи, бюджет — 0. Реальное SMS и Viber Business Messages платные и требуют верификации бизнеса (Viber вдобавок — с минимальным месячным платежом у большинства провайдеров). Email работает, но не мессенджер. Telegram Bot API полностью бесплатен без ограничений на нашем объёме сообщений — но у него есть fundamental-ограничение: **бот не может написать пользователю первым**, пока пользователь сам не отправил боту `/start`. Это не наше архитектурное решение, а ограничение платформы Telegram — приходится проектировать flow вокруг него.
+Clients need a booking notification, and the budget is €0. Real SMS and Viber Business Messages are paid and require business verification (Viber also has a minimum monthly fee with most providers). Email works but isn't a messenger. The Telegram Bot API is completely free with no limits at our volume — but it has a fundamental limitation: **a bot cannot message a user first**, until the user has sent `/start` to the bot themselves. This isn't our architectural choice but a platform limitation of Telegram — the flow has to be designed around it.
 
 ## Flow
 
-1. Клиент заполняет форму записи на публичной странице → `POST /bookings`.
-2. Бэкенд создаёт `Booking` с автоматически сгенерированным `notifyToken` (случайная строка, не совпадает с `booking.id`).
-3. Ответ API включает `telegramDeepLink`: `https://t.me/TrimlyBot?start=<notifyToken>`.
-4. Фронт на экране подтверждения показывает кнопку «Получать уведомления в Telegram» с этой ссылкой.
-5. Если клиент нажимает — открывается Telegram, чат с ботом, автоматически отправляется `/start <notifyToken>`.
-6. Бот (webhook на `/telegram/webhook`) получает Update, парсит `notifyToken` из payload команды `/start`, ищет `Booking` по этому токену.
-7. Если найдена — бэкенд сохраняет `chatId` из Update в `Booking.telegramChatId` и сразу отправляет сообщение с деталями записи (барбер, услуга, дата и время).
-8. Если клиент не нажал кнопку — `telegramChatId` остаётся `null`, это нормально, просто нет автоматического уведомления. Барбер всё равно видит запись в панели.
+1. The client fills out the booking form on the public page → `POST /bookings`.
+2. The backend creates a `Booking` with an automatically generated `notifyToken` (a random string, not the same as `booking.id`).
+3. The API response includes `telegramDeepLink`: `https://t.me/TrimlyBot?start=<notifyToken>`.
+4. On the confirmation screen, the frontend shows a "Get notifications on Telegram" button with this link.
+5. If the client taps it — Telegram opens, a chat with the bot starts, and `/start <notifyToken>` is sent automatically.
+6. The bot (webhook at `/telegram/webhook`) receives the Update, parses `notifyToken` from the `/start` command payload, and looks up the `Booking` by this token.
+7. If found — the backend saves the `chatId` from the Update into `Booking.telegramChatId` and immediately sends a message with the booking details (barber, service, date and time).
+8. If the client didn't tap the button — `telegramChatId` stays `null`, which is normal; there's just no automatic notification. The barber still sees the booking in the panel.
 
-## Почему webhook, а не polling
+## Why webhook, not polling
 
-Два способа получать апдейты от Telegram: long polling (`getUpdates`) или webhook (Telegram сам стучится на наш URL). Раз бэкенд и так постоянно работает на Render (не serverless — см. `architecture.md`), webhook — естественный выбор: не нужен отдельный процесс-поллер, апдейты приходят мгновенно, меньше кода. Это ещё один аргумент в пользу решения не переезжать на Vercel serverless для бэка — там держать вебхук пришлось бы городить отдельно.
+There are two ways to receive updates from Telegram: long polling (`getUpdates`) or webhook (Telegram calls our URL itself). Since the backend already runs continuously on Render (not serverless — see `architecture.md`), a webhook is the natural choice: no separate poller process needed, updates arrive instantly, less code. This is another argument in favor of not moving the backend to Vercel serverless — hosting a webhook there would require extra work.
 
-## Технические детали
+## Technical details
 
-- Библиотека: **grammY** (TS-first, активно поддерживается, простая интеграция как Nest-модуль).
-- Токен бота получается бесплатно у `@BotFather` в Telegram (создать бота, скопировать токен) — хранится как переменная окружения `TELEGRAM_BOT_TOKEN` на Render, никогда не коммитится в репозиторий.
-- Вебхук защищается секретным заголовком (`secret_token` при регистрации вебхука через `setWebhook`), Telegram присылает его в каждом запросе — сверяем перед обработкой, чтобы никто посторонний не мог слать нам поддельные апдейты.
+- Library: **grammY** (TS-first, actively maintained, simple to integrate as a Nest module).
+- The bot token is obtained for free from `@BotFather` on Telegram (create a bot, copy the token) — stored as the `TELEGRAM_BOT_TOKEN` environment variable on Render, never committed to the repository.
+- The webhook is protected by a secret header (`secret_token`, set when registering the webhook via `setWebhook`); Telegram sends it with every request — it's checked before processing, so no one else can send us fake updates.
 
-## Безопасность
+## Security
 
-`notifyToken` — отдельное случайное поле, не `booking.id`. Если бы использовался сам ID (особенно если он был бы предсказуемым/последовательным), кто угодно мог бы подписаться на чужие уведомления о записи, перебирая ID. Случайный уникальный токен убирает эту возможность.
+`notifyToken` is a separate random field, not `booking.id`. If the ID itself were used (especially if predictable/sequential), anyone could subscribe to someone else's booking notifications by enumerating IDs. A random unique token removes that possibility.
 
-## Что осознанно не делаем в MVP (но flow это не блокирует)
+## Deliberately out of scope for the MVP (but the flow doesn't block it)
 
-- Напоминание за N часов до визита (нужен `@nestjs/schedule` cron — технически несложно добавить позже, раз бэк уже постоянно работает на Render).
-- Уведомление об отмене записи через бота (тот же механизм, просто ещё один тип сообщения — легко добавить, когда появится отмена в админ-панели).
+- Reminder N hours before the appointment (needs `@nestjs/schedule` cron — technically simple to add later, since the backend already runs continuously on Render).
+- Cancellation notification via the bot (same mechanism, just another message type — easy to add once cancellation exists in the admin panel).

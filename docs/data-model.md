@@ -1,12 +1,12 @@
-# Модель данных
+# Data Model
 
-## Prisma-схема
+## Prisma schema
 
 ```prisma
 enum Role {
   ADMIN
-  // BARBER — зарезервировано на будущее: отдельный логин мастера,
-  // видит и управляет только своими записями/услугами/расписанием
+  // BARBER — reserved for the future: a separate master login,
+  // sees and manages only their own bookings/services/schedule
 }
 
 enum BookingStatus {
@@ -52,7 +52,7 @@ model WorkingHours {
   id        String @id @default(cuid())
   barber    Barber @relation(fields: [barberId], references: [id])
   barberId  String
-  weekday   Int    // 0-6, 0 = воскресенье
+  weekday   Int    // 0-6, 0 = Sunday
   startTime String // "09:00"
   endTime   String // "18:00"
 }
@@ -82,16 +82,16 @@ model Booking {
 }
 ```
 
-## Ключевые решения по модели
+## Key modeling decisions
 
-**`Barber` не связан с `User`.** В MVP только одна роль — ADMIN, и барберы не логинятся отдельно. `Barber` — это профиль-данные (имя, фото, расписание), которым управляет админ через панель. Это осознанное упрощение: когда понадобится роль `BARBER` с отдельным логином, добавится связь `Barber.userId` — модель это не блокирует.
+**`Barber` is not linked to `User`.** In the MVP there's only one role — ADMIN — and barbers don't log in separately. `Barber` is a data profile (name, photo, schedule) managed by the admin through the panel. This is a deliberate simplification: when a `BARBER` role with its own login is needed, a `Barber.userId` relation will be added — the model doesn't block this.
 
-**`Service` принадлежит конкретному барберу, а не шопу целиком.** У разных мастеров может отличаться цена и длительность одной и той же услуги (например, «стрижка» у одного 30 мин / €20, у другого 45 мин / €25).
+**`Service` belongs to a specific barber, not to the shop as a whole.** Different masters can have different prices and durations for the same service (e.g. a "haircut" might be 30 min / €20 with one barber and 45 min / €25 with another).
 
-**Время хранится в UTC.** У барбера есть `timezone` (по умолчанию `Europe/Brussels`) для корректного построения слотов на фронте и бэке. Важно не потерять эту деталь, если появится барбер в другом часовом поясе.
+**Time is stored in UTC.** Each barber has a `timezone` (default `Europe/Brussels`) for correctly building slots on the frontend and backend. Important not to lose this detail if a barber in a different timezone joins.
 
-**`notifyToken`** — случайный уникальный токен, генерируется на каждую запись автоматически. Используется в deep-link на Telegram-бота (`t.me/BotName?start=<notifyToken>`), чтобы бот мог сопоставить `/start` с конкретной записью. Специально не используется сам `booking.id` в качестве публичного токена (см. `notifications-telegram.md`, раздел про безопасность).
+**`notifyToken`** — a random unique token, generated automatically for every booking. Used in the deep link to the Telegram bot (`t.me/BotName?start=<notifyToken>`) so the bot can match `/start` to a specific booking. `booking.id` is deliberately not used as the public token (see `notifications-telegram.md`, security section).
 
-**`telegramChatId`** — заполняется только после того, как клиент нажал кнопку и написал боту `/start`. `null` означает, что клиент не подписался на уведомления — это нормальный сценарий, не ошибка.
+**`telegramChatId`** — filled in only after the client taps the button and sends `/start` to the bot. `null` means the client hasn't subscribed to notifications — this is a normal scenario, not an error.
 
-**Статусы записи (`BookingStatus`)** — без `PENDING`: запись сразу подтверждается при создании (auto-confirm), барбер видит её в панели и может отменить (`CANCELLED`) или отметить выполненной (`COMPLETED`). Ручное подтверждение барбером — осознанно вне MVP (см. `roadmap.md`).
+**Booking statuses (`BookingStatus`)** — no `PENDING`: a booking is confirmed immediately on creation (auto-confirm), the barber sees it in the panel and can cancel it (`CANCELLED`) or mark it completed (`COMPLETED`). Manual confirmation by the barber is deliberately out of scope for the MVP (see `roadmap.md`).

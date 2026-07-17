@@ -1,28 +1,28 @@
-# Бизнес-логика
+# Business Logic
 
-## Расчёт доступных слотов
+## Calculating available slots
 
-Самая хрупкая часть системы, требует unit-тестов (Vitest/Jest) в первую очередь.
+The most fragile part of the system — needs unit tests (Vitest/Jest) first.
 
-Вход: `barberId`, `serviceId`, `date`.
+Input: `barberId`, `serviceId`, `date`.
 
-1. Взять `WorkingHours` барбера для дня недели выбранной даты.
-2. Проверить `DayOff` — если дата закрыта, слотов нет.
-3. Нарезать рабочий интервал на слоты по длительности выбранной услуги (`Service.durationMinutes`).
-4. Вычесть пересечения с уже существующими `Booking` этого барбера на эту дату (проверка перекрытия интервалов `[startAt, endAt)`).
-5. Отфильтровать прошедшие слоты, если дата — сегодня (сравнение в таймзоне барбера, не сервера).
+1. Take the barber's `WorkingHours` for the weekday of the selected date.
+2. Check `DayOff` — if the date is blocked, there are no slots.
+3. Slice the working interval into slots sized by the selected service's duration (`Service.durationMinutes`).
+4. Subtract overlaps with this barber's existing `Booking`s on that date (interval overlap check on `[startAt, endAt)`).
+5. Filter out past slots if the date is today (comparison in the barber's timezone, not the server's).
 
-## Защита от double booking
+## Double booking protection
 
-Гонка возможна, если два клиента одновременно бронируют один и тот же слот. Проверка доступности на фронте — это только UX, не гарантия.
+A race is possible if two clients book the same slot at the same time. Availability checking on the frontend is UX only, not a guarantee.
 
-На бэке при `POST /bookings`:
-- Перед `INSERT` в транзакции повторно проверять отсутствие пересечения интервалов для этого барбера.
-- Использовать уровень изоляции транзакции, достаточный для предотвращения гонки (как минимум `SERIALIZABLE` для этой конкретной транзакции, либо unique-constraint/advisory lock на уровне барбера+времени — детали фиксируются при реализации).
+On the backend, on `POST /bookings`:
+- Before the `INSERT`, re-check within a transaction that there's no interval overlap for this barber.
+- Use a transaction isolation level sufficient to prevent the race (at minimum `SERIALIZABLE` for this specific transaction, or a unique constraint / advisory lock at the barber+time level — details to be finalized during implementation).
 
-## Таймзоны
+## Timezones
 
-- В БД всё время — UTC.
-- У каждого барбера есть `timezone` (IANA-строка, например `Europe/Brussels`).
-- Слоты на фронте показываются и вводятся в таймзоне барбера, конвертация в UTC — на бэке при сохранении.
-- Важно не сравнивать «сегодня» по серверному времени сервера (Render) — использовать таймзону барбера.
+- All times in the DB are UTC.
+- Each barber has a `timezone` (IANA string, e.g. `Europe/Brussels`).
+- Slots are shown and entered on the frontend in the barber's timezone; conversion to UTC happens on the backend when saving.
+- Important: don't compare "today" using the server's (Render) time — use the barber's timezone.

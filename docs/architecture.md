@@ -1,64 +1,64 @@
-# Архитектура
+# Architecture
 
 ## Frontend
 
 - **Next.js 14 (App Router)**, TypeScript
-- **TailwindCSS + shadcn/ui** — быстро, современно, хорошо смотрится в портфолио
-- **TanStack Query** — работа с API, кэш, инвалидация
-- **React Hook Form + Zod** — формы и валидация (схемы шарятся с бэком через `packages/shared`)
-- **date-fns**, **react-day-picker** — работа с датами, выбор дня
+- **TailwindCSS + shadcn/ui** — fast, modern, looks good in a portfolio
+- **TanStack Query** — API calls, caching, invalidation
+- **React Hook Form + Zod** — forms and validation (schemas shared with the backend via `packages/shared`)
+- **date-fns**, **react-day-picker** — date handling, day picker
 
-Одно Next.js-приложение обслуживает обе поверхности: публичную страницу записи (корневые роуты) и админ-панель (`/admin/*`, защищено проверкой JWT). Так проще деплой — один Vercel-проект вместо двух.
+One Next.js app serves both surfaces: the public booking page (root routes) and the admin panel (`/admin/*`, protected by a JWT check). This simplifies deployment — one Vercel project instead of two.
 
 ## Backend
 
 - **NestJS**, TypeScript
 - **Prisma ORM**
-- **Passport-JWT** — авторизация (email + пароль, bcrypt для хэша)
-- **class-validator / class-transformer** — валидация DTO
-- Guards с декоратором `@Roles(ADMIN)` — структура рассчитана на добавление ролей позже без переделки
-- **grammY** — Telegram-бот (см. `notifications-telegram.md`), работает как модуль внутри того же Nest-процесса
+- **Passport-JWT** — authorization (email + password, bcrypt for hashing)
+- **class-validator / class-transformer** — DTO validation
+- Guards with the `@Roles(ADMIN)` decorator — structure designed to support adding roles later without rework
+- **grammY** — Telegram bot (see `notifications-telegram.md`), runs as a module inside the same Nest process
 
-## База данных
+## Database
 
-**PostgreSQL на Neon** — serverless Postgres, щедрый free tier, не требует своего сервера БД.
+**PostgreSQL on Neon** — serverless Postgres, generous free tier, no need to run your own DB server.
 
-## Инфраструктура и деплой
+## Infrastructure and deployment
 
 ### Frontend → Vercel
 
-Стандартный выбор для Next.js, поддерживает всё из коробки: SSR, Middleware (используется для защиты `/admin` роутов), preview-деплои на каждый PR, Image Optimization.
+The standard choice for Next.js, supports everything out of the box: SSR, Middleware (used to protect `/admin` routes), preview deployments on every PR, Image Optimization.
 
-**Рассматривали GitHub Pages** как альтернативу (тоже бесплатно). Отклонили: GH Pages — чисто статический хостинг, потребовал бы `output: 'export'`, что ломает Middleware (пришлось бы переносить проверку авторизации админки на клиент — менее надёжно), отключает Image Optimization, нет preview-деплоев на PR, сайт по умолчанию живёт на `username.github.io/repo`, а не на корневом домене. При равной цене (0 €) Vercel даёт больше возможностей — выбор в его пользу.
+**GitHub Pages was considered** as an alternative (also free). Rejected: GH Pages is purely static hosting, would require `output: 'export'`, which breaks Middleware (admin auth checking would have to move to the client — less reliable), disables Image Optimization, has no PR preview deployments, and the site lives by default at `username.github.io/repo` rather than a root domain. At equal cost (€0), Vercel offers more capability — chosen instead.
 
 ### Backend → Render (free web service)
 
-Обычный long-running Node-процесс, не serverless. Автодеплой из `apps/api`.
+A regular long-running Node process, not serverless. Auto-deploys from `apps/api`.
 
-- Минус free-тира: засыпает после 15 мин простоя → холодный старт 30-50 сек на первый запрос.
-- Решение для демо: бесплатный внешний пингер (например cron-job.org) раз в 10 минут на health-check эндпоинт (`GET /health`), чтобы сервис не засыпал перед показом рекрутеру/барберу.
+- Downside of the free tier: sleeps after 15 minutes of inactivity → 30-50 second cold start on the first request.
+- Solution for demos: a free external pinger (e.g. cron-job.org) hitting the health-check endpoint (`GET /health`) every 10 minutes, so the service doesn't fall asleep before a demo to a recruiter or the barber.
 
-**Почему не «всё на Vercel» (serverless-функции для Nest):**
-- `@nestjs/schedule` (cron) не работает надёжно между холодными вызовами — а нам он нужен для Telegram-webhook-процесса и потенциальных будущих напоминаний.
-- Лимит выполнения 10 сек на Hobby-плане.
-- Prisma + Postgres в serverless требует доп. драйвера пула соединений (Neon serverless driver / Prisma Accelerate) — лишняя сложность.
-- Для портфолио выгоднее показать «настоящий» Nest-сервер, чем городить serverless-обвязку вокруг него.
+**Why not "everything on Vercel" (serverless functions for Nest):**
+- `@nestjs/schedule` (cron) doesn't work reliably across cold starts — and we need it for the Telegram webhook process and potential future reminders.
+- 10-second execution limit on the Hobby plan.
+- Prisma + Postgres in serverless requires an extra connection pooling driver (Neon serverless driver / Prisma Accelerate) — unnecessary complexity.
+- For a portfolio, it's more valuable to show a "real" Nest server than to wrap serverless plumbing around it.
 
-## Структура монорепо (Turborepo)
+## Monorepo structure (Turborepo)
 
 ```
 trimly/
 ├── apps/
-│   ├── web/          # Next.js — публичная страница + админ-панель
-│   └── api/           # NestJS backend (включая Telegram-бота)
+│   ├── web/          # Next.js — public page + admin panel
+│   └── api/           # NestJS backend (including the Telegram bot)
 ├── packages/
-│   └── shared/         # общие Zod-схемы и TS-типы (фронт + бэк)
+│   └── shared/         # shared Zod schemas and TS types (frontend + backend)
 ├── turbo.json
 └── package.json
 ```
 
-`packages/shared` — общие Zod-схемы для DTO (например, схема создания записи), которые использует и фронт (валидация формы), и бэк (валидация запроса). Экономит дублирование и хорошо смотрится как приём в портфолио.
+`packages/shared` — shared Zod schemas for DTOs (e.g. the booking-creation schema), used by both the frontend (form validation) and the backend (request validation). Avoids duplication and looks good as a portfolio technique.
 
 ## CI
 
-GitHub Actions: lint + typecheck + test на каждый PR. Деплой фронта и бэка триггерится отдельно самими платформами (Vercel/Render) на push в `main`.
+GitHub Actions: lint + typecheck + test on every PR. Frontend and backend deployment is triggered separately by the platforms themselves (Vercel/Render) on push to `main`.

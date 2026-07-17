@@ -1,20 +1,20 @@
-# API — эндпоинты
+# API — Endpoints
 
-Базовый URL — адрес Render-сервиса. Все защищённые эндпоинты требуют заголовок `Authorization: Bearer <JWT>`.
+Base URL — the Render service address. All protected endpoints require an `Authorization: Bearer <JWT>` header.
 
-## Публичные
+## Public
 
-| Метод | Путь | Описание |
+| Method | Path | Description |
 |---|---|---|
-| GET | `/barbers` | Список активных барберов |
-| GET | `/barbers/:id/services` | Услуги барбера |
-| GET | `/barbers/:id/availability?date=&serviceId=` | Доступные слоты на дату |
-| POST | `/bookings` | Создать запись |
-| GET | `/health` | Health-check (для пингера, чтобы Render не засыпал) |
+| GET | `/barbers` | List of active barbers |
+| GET | `/barbers/:id/services` | Barber's services |
+| GET | `/barbers/:id/availability?date=&serviceId=` | Available slots for a date |
+| POST | `/bookings` | Create a booking |
+| GET | `/health` | Health check (for the pinger, to keep Render from sleeping) |
 
-### `POST /bookings` — контракт
+### `POST /bookings` — contract
 
-Запрос (валидируется общей Zod-схемой из `packages/shared`):
+Request (validated by the shared Zod schema from `packages/shared`):
 
 ```json
 {
@@ -26,9 +26,9 @@
 }
 ```
 
-`clientPhone` обязателен, валидируется по формату телефона на фронте и на бэке (одна и та же Zod-схема).
+`clientPhone` is required, validated against a phone format on both frontend and backend (same Zod schema).
 
-Ответ:
+Response:
 
 ```json
 {
@@ -40,25 +40,25 @@
 }
 ```
 
-`telegramDeepLink` фронт сразу использует для кнопки «Получать уведомления в Telegram» на экране подтверждения — отдельный запрос не нужен.
+The frontend uses `telegramDeepLink` immediately for the "Get notifications on Telegram" button on the confirmation screen — no separate request needed.
 
-## Защищённые (JWT, роль ADMIN)
+## Protected (JWT, ADMIN role)
 
-| Метод | Путь | Описание |
+| Method | Path | Description |
 |---|---|---|
-| POST | `/auth/login` | Логин, возвращает JWT |
-| GET | `/auth/me` | Текущий пользователь |
-| GET/POST/PATCH/DELETE | `/barbers` | CRUD барберов |
-| GET/POST/PATCH/DELETE | `/services` | CRUD услуг |
-| GET/POST/PATCH/DELETE | `/working-hours` | CRUD расписания |
-| GET/POST/PATCH/DELETE | `/day-offs` | CRUD выходных |
-| GET | `/bookings?from=&to=&barberId=` | Список записей с фильтрами |
-| PATCH | `/bookings/:id` | Отменить / отметить выполненной |
+| POST | `/auth/login` | Login, returns a JWT |
+| GET | `/auth/me` | Current user |
+| GET/POST/PATCH/DELETE | `/barbers` | Barber CRUD |
+| GET/POST/PATCH/DELETE | `/services` | Service CRUD |
+| GET/POST/PATCH/DELETE | `/working-hours` | Schedule CRUD |
+| GET/POST/PATCH/DELETE | `/day-offs` | Day off CRUD |
+| GET | `/bookings?from=&to=&barberId=` | List bookings with filters |
+| PATCH | `/bookings/:id` | Cancel / mark as completed |
 
-## Служебный (Telegram)
+## Service endpoint (Telegram)
 
-| Метод | Путь | Описание |
+| Method | Path | Description |
 |---|---|---|
-| POST | `/telegram/webhook` | Принимает Update от Telegram. Защищён секретным заголовком `X-Telegram-Bot-Api-Secret-Token`, а не JWT (Telegram сам его добавляет к каждому запросу) |
+| POST | `/telegram/webhook` | Receives Updates from Telegram. Protected by a secret header `X-Telegram-Bot-Api-Secret-Token` instead of JWT (Telegram adds it to every request itself) |
 
-Подробности — `notifications-telegram.md`.
+Details — `notifications-telegram.md`.

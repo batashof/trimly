@@ -1,51 +1,59 @@
-# Лог решений
+# Decision Log
 
-> Формат: дата — тема, что решили, почему, что рассматривали как альтернативу. Новые решения добавляются в конец, старые не переписываются (если решение меняется — добавляется новая запись со ссылкой на старую, а не правится история).
+> Format: date — topic, what was decided, why, what alternatives were considered. New decisions are appended at the end; old ones aren't rewritten (if a decision changes, a new entry is added referencing the old one, not edited in place).
 
-## 2026-07-17 — Backend хостинг
+## 2026-07-17 — Backend hosting
 
-**Решение:** NestJS как обычный процесс на Render (free web service), не serverless-функции на Vercel.
+**Decision:** NestJS as a regular process on Render (free web service), not serverless functions on Vercel.
 
-**Почему:** `@nestjs/schedule` не работает надёжно между холодными вызовами, лимит 10 сек на Vercel Hobby, Prisma+Postgres в serverless требует доп. драйвера пула соединений. Для портфолио выгоднее показать «настоящий» Nest-сервер. Позже это решение также упростило интеграцию Telegram-вебхука (см. запись про уведомления ниже).
+**Why:** `@nestjs/schedule` doesn't work reliably across cold starts, there's a 10-second limit on Vercel Hobby, and Prisma+Postgres in serverless requires an extra connection pooling driver. For a portfolio it's more valuable to show a "real" Nest server. This decision later also simplified the Telegram webhook integration (see the notifications entry below).
 
-**Альтернативы:** Vercel serverless functions, Railway (больше нет постоянного бесплатного тарифа), Fly.io (требует карту).
+**Alternatives:** Vercel serverless functions, Railway (no longer has a permanent free tier), Fly.io (requires a card).
 
-**Компромисс:** Render free засыпает после 15 мин простоя (холодный старт 30-50 сек). Решение — бесплатный внешний пингер (cron-job.org) на `/health`.
+**Trade-off:** Render free sleeps after 15 min of inactivity (30-50 sec cold start). Solution — a free external pinger (cron-job.org) on `/health`.
 
-## 2026-07-17 — Frontend хостинг
+## 2026-07-17 — Frontend hosting
 
-**Решение:** Vercel, не GitHub Pages.
+**Decision:** Vercel, not GitHub Pages.
 
-**Почему:** GitHub Pages — чисто статический хостинг, потребовал бы `output: 'export'` в Next.js, что отключает Middleware (защита `/admin` пришлось бы переносить на клиент), Image Optimization, preview-деплои на PR. При равной цене (0 €) Vercel даёт больше возможностей.
+**Why:** GitHub Pages is purely static hosting and would require `output: 'export'` in Next.js, which disables Middleware (`/admin` protection would have to move to the client), Image Optimization, and PR preview deployments. At equal cost (€0), Vercel offers more capability.
 
-**Альтернативы:** GitHub Pages (предложено пользователем).
+**Alternatives:** GitHub Pages (proposed by the user).
 
-## 2026-07-17 — Роли и модель User/Barber
+## 2026-07-17 — Roles and the User/Barber model
 
-**Решение:** В MVP только одна роль — `ADMIN`. `Barber` — независимая сущность (данные, не аккаунт), не связана с `User`.
+**Decision:** Only one role in the MVP — `ADMIN`. `Barber` is an independent entity (data, not an account), not linked to `User`.
 
-**Почему:** Барберы пока не логинятся сами, всем управляет один админ. `Role` остаётся enum'ом (не строкой), чтобы позже добавить `BARBER`-роль с отдельным логином без переделки схемы.
+**Why:** Barbers don't log in themselves yet; a single admin manages everything. `Role` stays an enum (not a string), so a `BARBER` role with a separate login can be added later without reworking the schema.
 
-**Альтернативы:** Изначально рассматривалась модель с `OWNER`/`BARBER` и отдельным логином на каждого барбера — отложено как избыточное для текущего этапа.
+**Alternatives:** A model with `OWNER`/`BARBER` and a separate login per barber was initially considered — postponed as excessive for the current stage.
 
-## 2026-07-17 — Уведомления клиентам
+## 2026-07-17 — Client notifications
 
-**Решение:** Telegram-бот с deep-link подпиской (`/start <notifyToken>`), не SMS, не Viber, не email.
+**Decision:** A Telegram bot with deep-link subscription (`/start <notifyToken>`), not SMS, not Viber, not email.
 
-**Почему:** SMS и Viber Business Messages — платные, Viber вдобавок требует верификации бизнеса и у большинства провайдеров есть минимальный месячный платёж (~€100-235). Бюджет проекта — 0. Telegram Bot API бесплатен без ограничений на нашем объёме. Ограничение — бот не может написать первым, поэтому клиенту нужен один тап на кнопку после записи.
+**Why:** SMS and Viber Business Messages are paid, and Viber additionally requires business verification; most providers also have a minimum monthly fee (~€100-235). Project budget is €0. The Telegram Bot API is free with no limits at our volume. Limitation — the bot can't message first, so the client needs to tap a button once after booking.
 
-**Альтернативы рассмотрены:** SMS (Twilio) — платно; Viber Business Messages — платно + верификация; Email (Resend) — бесплатно, но не мессенджер, отклонено в пользу Telegram по прямому запросу пользователя.
+**Alternatives considered:** SMS (Twilio) — paid; Viber Business Messages — paid + verification; Email (Resend) — free, but not a messenger, rejected in favor of Telegram per the user's direct request.
 
-Подробная архитектура — `notifications-telegram.md`.
+Detailed architecture — `notifications-telegram.md`.
 
-## 2026-07-17 — Название проекта и хранение документации
+## 2026-07-17 — Project name and documentation storage
 
-**Решение:** Проект переименован из BarberBook в **Trimly**. Документация переносится из ручной загрузки в Project knowledge на GitHub-репозиторий, подключаемый к Claude Project как источник контекста.
+**Decision:** The project was renamed from BarberBook to **Trimly**. Documentation moved from manual upload to Project knowledge backed by a GitHub repository, connected to the Claude Project as a context source.
 
-**Почему:** Ручная перезагрузка файлов в Project knowledge после каждого изменения неудобна — репозиторий даёт версионирование и единый источник правды, который заодно нужен для самого кода проекта.
+**Why:** Manually re-uploading files to Project knowledge after every change is inconvenient — a repository provides versioning and a single source of truth, which is needed for the project's code anyway.
 
-## 2026-07-17 — Уведомления барберу
+## 2026-07-17 — Barber notifications
 
-**Решение:** Не нужны в MVP, барбер смотрит записи в админ-панели.
+**Decision:** Not needed in the MVP; the barber checks bookings in the admin panel.
 
-**Почему:** Явное решение пользователя с самого начала проекта, снижает объём MVP.
+**Why:** An explicit user decision from the start of the project, reduces MVP scope.
+
+## 2026-07-17 — Documentation and code language
+
+**Decision:** All project documentation, all instructions given to Claude within this project, and everything related to code — code itself, comments, identifiers, commit messages, error/log messages, README files — is now written in **English**. All previously Russian-language docs (`trimly-project-plan.md` and the whole `docs/` folder) were translated to English in place, replacing the old files.
+
+**Why:** The project is a portfolio piece; English is the standard language for code and technical documentation in the industry the user is targeting, and it keeps the repository consistent for any future collaborator or reviewer who doesn't read Russian.
+
+**Alternatives considered:** Keep documentation in Russian with English-only code (rejected — inconsistent, mixes languages within the same repository); maintain bilingual docs (rejected — doubles maintenance effort for no benefit at this stage).
