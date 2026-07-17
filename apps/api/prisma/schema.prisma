@@ -1,0 +1,99 @@
+// Trimly data model. See docs/data-model.md for the rationale behind each
+// modeling decision (Barber decoupled from User, per-barber Services, UTC
+// storage, notifyToken vs booking.id, etc.).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  // BARBER — reserved for the future: a separate master login,
+  // sees and manages only their own bookings/services/schedule.
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now())
+}
+
+model Barber {
+  id           String         @id @default(cuid())
+  displayName  String
+  bio          String?
+  photoUrl     String?
+  timezone     String         @default("Europe/Brussels")
+  isActive     Boolean        @default(true)
+  services     Service[]
+  workingHours WorkingHours[]
+  dayOffs      DayOff[]
+  bookings     Booking[]
+  createdAt    DateTime       @default(now())
+}
+
+model Service {
+  id              String    @id @default(cuid())
+  barber          Barber    @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  barberId        String
+  name            String
+  durationMinutes Int
+  price           Decimal   @db.Decimal(10, 2)
+  isActive        Boolean   @default(true)
+  bookings        Booking[]
+
+  @@index([barberId])
+}
+
+model WorkingHours {
+  id        String @id @default(cuid())
+  barber    Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  barberId  String
+  weekday   Int // 0-6, 0 = Sunday
+  startTime String // "09:00"
+  endTime   String // "18:00"
+
+  @@index([barberId])
+}
+
+model DayOff {
+  id       String   @id @default(cuid())
+  barber   Barber   @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  barberId String
+  date     DateTime @db.Date
+  reason   String?
+
+  @@index([barberId])
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  barber         Barber        @relation(fields: [barberId], references: [id])
+  barberId       String
+  service        Service       @relation(fields: [serviceId], references: [id])
+  serviceId      String
+  clientName     String
+  clientPhone    String
+  startAt        DateTime
+  endAt          DateTime
+  status         BookingStatus @default(CONFIRMED)
+  notifyToken    String        @unique @default(cuid())
+  telegramChatId String?
+  createdAt      DateTime      @default(now())
+
+  @@index([barberId, startAt])
+}
