@@ -113,6 +113,43 @@ export interface DayOff {
   reason: string | null;
 }
 
+export type BookingStatus = 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+
+/** A booking as returned by GET /bookings (admin), with barber/service joined. */
+export interface AdminBooking {
+  id: string;
+  barberId: string;
+  serviceId: string;
+  clientName: string;
+  clientPhone: string;
+  startAt: string;
+  endAt: string;
+  status: BookingStatus;
+  barber: { id: string; displayName: string };
+  service: { id: string; name: string; durationMinutes: number };
+}
+
+export interface BarberInput {
+  displayName?: string;
+  bio?: string | null;
+  photoUrl?: string | null;
+  timezone?: string;
+  isActive?: boolean;
+}
+
+export interface ServiceInput {
+  name?: string;
+  durationMinutes?: number;
+  price?: number;
+  isActive?: boolean;
+}
+
+export interface BookingFilters {
+  from?: string;
+  to?: string;
+  barberId?: string;
+}
+
 // --- Endpoints ---
 
 export const api = {
@@ -127,6 +164,8 @@ export const api = {
     list: () => request<Barber[]>('/barbers'),
     create: (dto: { displayName: string; bio?: string; timezone?: string }) =>
       request<Barber>('/barbers', { method: 'POST', body: JSON.stringify(dto) }),
+    update: (id: string, dto: BarberInput) =>
+      request<Barber>(`/barbers/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }),
     remove: (id: string) => request<void>(`/barbers/${id}`, { method: 'DELETE' }),
   },
   services: {
@@ -134,15 +173,40 @@ export const api = {
       request<Service[]>(`/services${barberId ? `?barberId=${barberId}` : ''}`),
     create: (dto: { barberId: string; name: string; durationMinutes: number; price: number }) =>
       request<Service>('/services', { method: 'POST', body: JSON.stringify(dto) }),
+    update: (id: string, dto: ServiceInput) =>
+      request<Service>(`/services/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }),
     remove: (id: string) => request<void>(`/services/${id}`, { method: 'DELETE' }),
   },
   workingHours: {
     list: (barberId?: string) =>
       request<WorkingHour[]>(`/working-hours${barberId ? `?barberId=${barberId}` : ''}`),
+    create: (dto: { barberId: string; weekday: number; startTime: string; endTime: string }) =>
+      request<WorkingHour>('/working-hours', { method: 'POST', body: JSON.stringify(dto) }),
+    update: (id: string, dto: { weekday?: number; startTime?: string; endTime?: string }) =>
+      request<WorkingHour>(`/working-hours/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }),
+    remove: (id: string) => request<void>(`/working-hours/${id}`, { method: 'DELETE' }),
   },
   dayOffs: {
     list: (barberId?: string) =>
       request<DayOff[]>(`/day-offs${barberId ? `?barberId=${barberId}` : ''}`),
+    create: (dto: { barberId: string; date: string; reason?: string }) =>
+      request<DayOff>('/day-offs', { method: 'POST', body: JSON.stringify(dto) }),
+    remove: (id: string) => request<void>(`/day-offs/${id}`, { method: 'DELETE' }),
+  },
+  bookings: {
+    list: (filters: BookingFilters = {}) => {
+      const params = new URLSearchParams();
+      if (filters.from) params.set('from', filters.from);
+      if (filters.to) params.set('to', filters.to);
+      if (filters.barberId) params.set('barberId', filters.barberId);
+      const qs = params.toString();
+      return request<AdminBooking[]>(`/bookings${qs ? `?${qs}` : ''}`);
+    },
+    update: (id: string, status: 'CANCELLED' | 'COMPLETED') =>
+      request<AdminBooking>(`/bookings/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
   },
 
   // Public booking flow (no auth) — used by /book/[barberId].
