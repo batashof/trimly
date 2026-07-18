@@ -33,7 +33,7 @@ The standard choice for Next.js, supports everything out of the box: SSR, Middle
 
 ### Backend → Render (free web service)
 
-A regular long-running Node process, not serverless. Auto-deploys from `apps/api`.
+A regular long-running Node process, not serverless. Git auto-deploy is **off** (`autoDeploy: false`); deploys are fired by the CI `deploy` job via a Render deploy hook, only after CI passes (see CI section).
 
 - Downside of the free tier: sleeps after 15 minutes of inactivity → 30-50 second cold start on the first request.
 - Solution for demos: a free external pinger (e.g. cron-job.org) hitting the health-check endpoint (`GET /health`) every 10 minutes, so the service doesn't fall asleep before a demo to a recruiter or the barber.
@@ -61,4 +61,4 @@ trimly/
 
 ## CI
 
-GitHub Actions: lint + typecheck + test on every PR. Frontend and backend deployment is triggered separately by the platforms themselves (Vercel/Render) on push to `main`.
+GitHub Actions: lint + typecheck + test on every PR. Platform git auto-deploy is turned off on both Vercel and Render; instead a `deploy` job (`needs: build`, runs only on push to `main`) POSTs a Render deploy hook and a Vercel deploy hook, so green CI is the single precondition for a production deploy. See `decisions-log.md` (2026-07-18 — CI-gated deploys).
