@@ -113,21 +113,23 @@ export function BookingsTab({ barbers }: { barbers: Barber[] }) {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1">
-          <span className="block text-xs font-medium text-gray-600">Barber</span>
-          <select
-            value={barberId}
-            onChange={(e) => setBarberId(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">All barbers</option>
-            {barbers.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
+        {barbers.length > 1 && (
+          <label className="space-y-1">
+            <span className="block text-xs font-medium text-gray-600">Barber</span>
+            <select
+              value={barberId}
+              onChange={(e) => setBarberId(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">All barbers</option>
+              {barbers.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="space-y-1">
           <span className="block text-xs font-medium text-gray-600">From</span>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputClass} />

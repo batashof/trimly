@@ -64,16 +64,18 @@ export function ScheduleTab({ barbers }: { barbers: Barber[] }) {
 
   return (
     <div className="space-y-6">
-      <label className="space-y-1">
-        <span className="block text-xs font-medium text-gray-600">Barber</span>
-        <select value={barberId} onChange={(e) => setBarberId(e.target.value)} className={inputClass}>
-          {barbers.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.displayName}
-            </option>
-          ))}
-        </select>
-      </label>
+      {barbers.length > 1 && (
+        <label className="space-y-1">
+          <span className="block text-xs font-medium text-gray-600">Barber</span>
+          <select value={barberId} onChange={(e) => setBarberId(e.target.value)} className={inputClass}>
+            {barbers.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.displayName}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <ErrorBanner message={error} />
 

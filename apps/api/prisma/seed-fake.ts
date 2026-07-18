@@ -150,6 +150,18 @@ async function main(): Promise<void> {
   await sql`DELETE FROM "Service"`;
   await sql`DELETE FROM "Barber"`;
 
+  // The admin owns exactly one barber (admin *is* the barber), resolved via
+  // GET /barbers/me. Link the first demo barber to the admin account so the
+  // admin panel has a profile to manage; run `db:seed` first if there's no user.
+  const adminUsers = await sql`
+    SELECT id FROM "User" WHERE role = 'ADMIN' ORDER BY "createdAt" ASC LIMIT 1
+  `;
+  const adminId: string | null = adminUsers[0]?.id ?? null;
+  if (!adminId) {
+    // eslint-disable-next-line no-console
+    console.warn('No ADMIN user found — demo barbers will be unlinked. Run db:seed first.');
+  }
+
   const barberRows: Row[] = [];
   const serviceRows: Row[] = [];
   const workingHoursRows: Row[] = [];
@@ -159,6 +171,8 @@ async function main(): Promise<void> {
   for (const [bi, barber] of barbers.entries()) {
     barberRows.push({
       id: barber.id,
+      // Only the first demo barber belongs to the admin account.
+      userId: bi === 0 ? adminId : null,
       displayName: barber.displayName,
       bio: barber.bio,
       photoUrl: barber.photoUrl,
@@ -257,7 +271,7 @@ async function main(): Promise<void> {
     }
   }
 
-  await insertMany('Barber', ['id', 'displayName', 'bio', 'photoUrl', 'timezone', 'isActive'], barberRows);
+  await insertMany('Barber', ['id', 'userId', 'displayName', 'bio', 'photoUrl', 'timezone', 'isActive'], barberRows);
   await insertMany('Service', ['id', 'barberId', 'name', 'durationMinutes', 'price', 'isActive'], serviceRows);
   await insertMany('WorkingHours', ['id', 'barberId', 'weekday', 'startTime', 'endTime'], workingHoursRows);
   await insertMany('DayOff', ['id', 'barberId', 'date', 'reason'], dayOffRows);
