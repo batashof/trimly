@@ -47,3 +47,14 @@ services:
         sync: false
       - key: JWT_EXPIRES_IN
         value: "7d"
+      # Barber self-registration email (see docs/architecture.md). Resend API key
+      # and sender are dashboard-filled; leaving RESEND_API_KEY unset makes the
+      # API log the confirmation link instead of sending it (dev fallback).
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      # Frontend origin (the Vercel URL) used to build the confirmation link
+      # …/register/confirm?token=. Must be set, or links point at localhost.
+      - key: WEB_APP_URL
+        sync: false
