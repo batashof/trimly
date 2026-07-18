@@ -42,3 +42,25 @@ export const bookingConfirmationSchema = z.object({
 });
 
 export type BookingConfirmation = z.infer<typeof bookingConfirmationSchema>;
+
+/**
+ * Query for GET /bookings (admin). All filters are optional; `from`/`to` bound
+ * the booking `startAt` (ISO-8601 UTC), `barberId` narrows to one barber.
+ */
+export const bookingListQuerySchema = z.object({
+  from: z.string().datetime({ offset: false }).optional(),
+  to: z.string().datetime({ offset: false }).optional(),
+  barberId: z.string().min(1).optional(),
+});
+
+export type BookingListQuery = z.infer<typeof bookingListQuerySchema>;
+
+/**
+ * Body for PATCH /bookings/:id (admin). The admin can only move a booking to a
+ * terminal state — cancel it or mark it completed. See docs/data-model.md.
+ */
+export const updateBookingSchema = z.object({
+  status: z.enum(['CANCELLED', 'COMPLETED']),
+});
+
+export type UpdateBookingInput = z.infer<typeof updateBookingSchema>;
