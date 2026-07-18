@@ -9,15 +9,15 @@ Portfolio side project: a booking app for a barbershop.
 - No monetization, budget — €0. This is a hard constraint that affects the choice of every third-party service.
 - There's a barber acquaintance who is potentially willing to use the finished product.
 - Two interfaces:
-  1. **Public booking page** — no auth, linked from the barber's Instagram. Client picks a barber → service → date/time → must leave name and phone.
-  2. **Barbershop admin panel** — with auth. Manages barbers, services, schedule, and bookings.
-- MVP scale: designed from the start for multiple barbers (one shop, several masters).
+  1. **Public booking page** — no auth, reached via the barber's own link (`/book/:barberId`, shared from Instagram). No barber-picker: service → date/time → must leave name and phone.
+  2. **Barbershop admin panel** — with auth. The owner logs in as ADMIN and *is* the barber, and manages their own profile, services, schedule, and bookings.
+- MVP scale: one shop, one barber (the owner). The schema keeps the door open to extra masters — `Barber` is a standalone table and a future `BARBER` role can be added — but there is no multi-barber management UI today.
 - Clients receive a booking notification via a Telegram bot (see `docs/notifications-telegram.md`). The barber doesn't need separate notifications — they check bookings in the panel.
 
 ## 2. Roles
 
-- **ADMIN** — the only role in the MVP. Manages barbers (as data, not accounts), services, schedule, and sees all bookings.
-- **Barbers** — don't log in themselves; they are data profiles managed by ADMIN. The model is specifically designed so a `BARBER` role (separate master login, sees only their own bookings) can be added later without reworking the schema.
+- **ADMIN** — the only role in the MVP. The owner logs in as ADMIN and *is* the single barber (their account links 1:1 to a `Barber` profile via `Barber.userId`). Manages their own profile, services, schedule, and sees all bookings.
+- **Barber** — not a separate login today: the ADMIN account *is* the barber. The model keeps room for a future `BARBER` role (extra masters with their own login, each seeing only their own bookings) without reworking the schema — see `docs/data-model.md`.
 - **Client** — not authenticated, only interacts with the public page.
 
 ## 3. Tech stack (short version — details in `docs/architecture.md`)
@@ -37,11 +37,11 @@ Full log with dates and rationale — `docs/decisions-log.md`. Short version:
 |---|---|
 | Backend hosting | Render, not Vercel serverless |
 | Frontend hosting | Vercel, not GitHub Pages |
-| Roles | ADMIN only for MVP, Barber decoupled from User |
+| Roles | ADMIN only for MVP; the admin account *is* the barber (`Barber.userId` 1:1) |
 | Client phone | Required field |
 | Client notifications | Telegram bot with deep link (not SMS, not Viber, not email) |
 | Barber notifications | Not needed in MVP, checked via panel instead |
-| Scale | Multi-barber support built in from the start |
+| Scale | One shop, one barber (owner); schema leaves room for more, no UI for it |
 | Documentation & code language | English, for everything |
 
 ## 5. Project documentation structure
