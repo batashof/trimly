@@ -20,11 +20,14 @@ model User {
   email        String   @unique
   passwordHash String
   role         Role     @default(ADMIN)
+  barber       Barber?
   createdAt    DateTime @default(now())
 }
 
 model Barber {
   id           String         @id @default(cuid())
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId       String?        @unique
   displayName  String
   bio          String?
   photoUrl     String?
@@ -84,7 +87,7 @@ model Booking {
 
 ## Key modeling decisions
 
-**`Barber` is not linked to `User`.** In the MVP there's only one role — ADMIN — and barbers don't log in separately. `Barber` is a data profile (name, photo, schedule) managed by the admin through the panel. This is a deliberate simplification: when a `BARBER` role with its own login is needed, a `Barber.userId` relation will be added — the model doesn't block this.
+**`Barber` is linked 1:1 to `User` via `Barber.userId`.** The shop is one person: the owner logs in as ADMIN and *is* the single barber — one account, one profile. There is no "create barbers" flow; the seed creates the admin User and its Barber together, and the admin panel edits that one profile (`GET /barbers/me` resolves it from the JWT). The relation is optional (`userId String?`) with `onDelete: SetNull` so barber data and its bookings survive if the account is deleted, and so a future `BARBER`-role master (extra masters with their own login) can be added without reworking the model.
 
 **`Service` belongs to a specific barber, not to the shop as a whole.** Different masters can have different prices and durations for the same service (e.g. a "haircut" might be 30 min / €20 with one barber and 45 min / €25 with another).
 

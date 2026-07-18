@@ -32,6 +32,15 @@ export class BarbersService {
     return barber;
   }
 
+  /** The barber profile owned by the logged-in account (admin *is* the barber). */
+  async findByUser(userId: string): Promise<Barber> {
+    const barber = await this.prisma.barber.findUnique({ where: { userId } });
+    if (!barber) {
+      throw new NotFoundException('No barber profile is linked to this account');
+    }
+    return barber;
+  }
+
   async update(id: string, dto: UpdateBarberDto): Promise<Barber> {
     await this.findOne(id);
     return this.prisma.barber.update({ where: { id }, data: dto });

@@ -2,16 +2,19 @@ import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 /**
- * Seeds the first ADMIN user from environment variables. Idempotent: running
- * it again updates the password of the existing admin rather than failing.
+ * Seeds the first ADMIN user from environment variables and the barber profile
+ * that account owns — the owner logs in as ADMIN and *is* that barber. Idempotent:
+ * re-running updates the admin's password and leaves the linked barber in place.
  *
- *   ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=long-password pnpm --filter @trimly/api db:seed
+ *   ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=long-password \
+ *   ADMIN_DISPLAY_NAME="Alex the Barber" pnpm --filter @trimly/api db:seed
  */
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
   const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;
+  const displayName = process.env.ADMIN_DISPLAY_NAME?.trim() || 'Barber';
 
   if (!email || !password) {
     throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set to seed the admin user');
@@ -30,6 +33,21 @@ async function main(): Promise<void> {
 
   // eslint-disable-next-line no-console
   console.log(`Seeded admin user: ${admin.email} (${admin.id})`);
+
+  // The barber profile the admin owns. Create it only if this account has none
+  // yet — never overwrite an existing profile's name/schedule on re-seed.
+  const existing = await prisma.barber.findUnique({ where: { userId: admin.id } });
+  if (existing) {
+    // eslint-disable-next-line no-console
+    console.log(`Admin already has a barber profile: ${existing.displayName} (${existing.id})`);
+    return;
+  }
+
+  const barber = await prisma.barber.create({
+    data: { displayName, userId: admin.id },
+  });
+  // eslint-disable-next-line no-console
+  console.log(`Linked barber profile: ${barber.displayName} (${barber.id})`);
 }
 
 main()

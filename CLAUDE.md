@@ -17,6 +17,7 @@ Start here: [trimly-project-plan.md](trimly-project-plan.md) — the project's e
 - [docs/notifications-telegram.md](docs/notifications-telegram.md) — Telegram bot flow (deep link, `notifyToken`, webhook).
 - [docs/decisions-log.md](docs/decisions-log.md) — why things are the way they are. Append new decisions here; don't rewrite old ones.
 - [docs/roadmap.md](docs/roadmap.md) — build order and what's deliberately out of MVP scope.
+- [docs/dev-admin.md](docs/dev-admin.md) — hand-editing the database (Prisma Studio, password reset, accounts).
 
 When you make a decision worth recording (a trade-off, a rejected alternative), add an entry to `docs/decisions-log.md` rather than only leaving it in code.
 

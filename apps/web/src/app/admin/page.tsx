@@ -11,15 +11,16 @@ import {
   type Barber,
 } from '../../lib/api';
 import { BookingsTab } from './_components/BookingsTab';
-import { BarbersTab } from './_components/BarbersTab';
+import { ProfileTab } from './_components/ProfileTab';
 import { ServicesTab } from './_components/ServicesTab';
 import { ScheduleTab } from './_components/ScheduleTab';
 import { ErrorBanner, inputClass, PrimaryButton } from './_components/ui';
 
 /**
  * Trimly admin panel (roadmap step 6). Auth gate (JWT in localStorage) wraps a
- * tabbed dashboard: bookings with filters, plus barber / service / schedule
- * management. All CRUD goes through the admin endpoints in lib/api.ts.
+ * tabbed dashboard. The owner logs in as ADMIN and *is* the single barber, so
+ * the panel loads that one profile and manages its bookings / services /
+ * schedule. All CRUD goes through the admin endpoints in lib/api.ts.
  */
 export default function AdminPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -117,27 +118,32 @@ function LoginForm({ onSuccess }: { onSuccess: (user: AuthUser) => void }) {
   );
 }
 
-const TABS = ['Bookings', 'Barbers', 'Services', 'Schedule'] as const;
+const TABS = ['Bookings', 'Services', 'Schedule', 'Profile'] as const;
 type Tab = (typeof TABS)[number];
 
 function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>('Bookings');
-  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [barber, setBarber] = useState<Barber | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Barbers are shared across tabs (filters, service/schedule selectors), so
-  // they live here and reload on demand when the Barbers tab mutates them.
-  const reloadBarbers = useCallback(async () => {
+  // The admin owns exactly one barber profile; every tab operates on it, so it
+  // lives here and reloads when the Profile tab edits it.
+  const reloadBarber = useCallback(async () => {
     try {
-      setBarbers(await api.barbers.list());
+      setBarber(await api.barbers.me());
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load barbers');
+      setError(err instanceof ApiError ? err.message : 'Failed to load your barber profile');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void reloadBarbers();
-  }, [reloadBarbers]);
+    void reloadBarber();
+  }, [reloadBarber]);
+
+  const barbers = barber ? [barber] : [];
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-6">
@@ -145,7 +151,8 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => void })
         <div>
           <h1 className="text-xl font-semibold">Trimly admin</h1>
           <p className="text-sm text-gray-500">
-            {user.email} · {user.role}
+            {barber ? `${barber.displayName} · ` : ''}
+            {user.email}
           </p>
         </div>
         <button
@@ -174,10 +181,21 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => void })
 
       <ErrorBanner message={error} />
 
-      {tab === 'Bookings' && <BookingsTab barbers={barbers} />}
-      {tab === 'Barbers' && <BarbersTab barbers={barbers} onChange={reloadBarbers} />}
-      {tab === 'Services' && <ServicesTab barbers={barbers} />}
-      {tab === 'Schedule' && <ScheduleTab barbers={barbers} />}
+      {loading ? (
+        <p className="text-sm text-gray-500">Loading your profile…</p>
+      ) : !barber ? (
+        <p className="text-sm text-gray-500">
+          No barber profile is linked to this account. Run the seed, or link one in Prisma Studio
+          (see docs/dev-admin.md).
+        </p>
+      ) : (
+        <>
+          {tab === 'Bookings' && <BookingsTab barbers={barbers} />}
+          {tab === 'Services' && <ServicesTab barbers={barbers} />}
+          {tab === 'Schedule' && <ScheduleTab barbers={barbers} />}
+          {tab === 'Profile' && <ProfileTab barber={barber} onChange={reloadBarber} />}
+        </>
+      )}
     </main>
   );
 }

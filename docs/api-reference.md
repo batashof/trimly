@@ -53,6 +53,7 @@ The frontend uses `telegramDeepLink` immediately for the "Get notifications on T
 |---|---|---|
 | POST | `/auth/login` | Login, returns a JWT |
 | GET | `/auth/me` | Current user |
+| GET | `/barbers/me` | The barber profile owned by the logged-in admin (admin *is* the barber) |
 | POST/PATCH/DELETE | `/barbers` | Barber writes (reads are public — see above) |
 | GET/POST/PATCH/DELETE | `/services` | Service CRUD |
 | GET/POST/PATCH/DELETE | `/working-hours` | Schedule CRUD |

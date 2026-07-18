@@ -14,8 +14,8 @@ datasource db {
 
 enum Role {
   ADMIN
-  // BARBER — reserved for the future: a separate master login,
-  // sees and manages only their own bookings/services/schedule.
+  // BARBER — reserved for the future: extra masters with their own login,
+  // each seeing and managing only their own bookings/services/schedule.
 }
 
 enum BookingStatus {
@@ -29,11 +29,17 @@ model User {
   email        String   @unique
   passwordHash String
   role         Role     @default(ADMIN)
+  barber       Barber?
   createdAt    DateTime @default(now())
 }
 
 model Barber {
   id           String         @id @default(cuid())
+  // The owner logs in as ADMIN and *is* this barber — one account, one profile.
+  // Optional so barber data survives if the user account is deleted (SetNull),
+  // and to leave room for future BARBER-role masters without their own login.
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId       String?        @unique
   displayName  String
   bio          String?
   photoUrl     String?

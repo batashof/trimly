@@ -14,6 +14,8 @@ import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/types';
 import { BarbersService } from './barbers.service';
 import { CreateBarberDto } from './dto/create-barber.dto';
 import { UpdateBarberDto } from './dto/update-barber.dto';
@@ -38,6 +40,16 @@ export class BarbersController {
   @Get()
   findAll() {
     return this.barbersService.findAllActive();
+  }
+
+  /**
+   * The barber profile owned by the logged-in admin. Declared before `:id` so
+   * the literal "me" isn't swallowed by the param route.
+   */
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  findMine(@CurrentUser() user: AuthUser) {
+    return this.barbersService.findByUser(user.id);
   }
 
   /** Public: single barber profile for the booking page header. */

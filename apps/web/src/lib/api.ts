@@ -161,12 +161,10 @@ export const api = {
   me: () => request<AuthUser>('/auth/me'),
 
   barbers: {
-    list: () => request<Barber[]>('/barbers'),
-    create: (dto: { displayName: string; bio?: string; timezone?: string }) =>
-      request<Barber>('/barbers', { method: 'POST', body: JSON.stringify(dto) }),
+    /** The barber profile owned by the logged-in admin (admin *is* the barber). */
+    me: () => request<Barber>('/barbers/me'),
     update: (id: string, dto: BarberInput) =>
       request<Barber>(`/barbers/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }),
-    remove: (id: string) => request<void>(`/barbers/${id}`, { method: 'DELETE' }),
   },
   services: {
     list: (barberId?: string) =>
