@@ -150,8 +150,6 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => void })
     void reloadBarber();
   }, [reloadBarber]);
 
-  const barbers = barber ? [barber] : [];
-
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-6">
       <header className="flex items-center justify-between border-b border-gray-200 pb-4">
@@ -197,9 +195,9 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => void })
         </p>
       ) : (
         <>
-          {tab === 'Bookings' && <BookingsTab barbers={barbers} />}
-          {tab === 'Services' && <ServicesTab barbers={barbers} />}
-          {tab === 'Schedule' && <ScheduleTab barbers={barbers} />}
+          {tab === 'Bookings' && <BookingsTab barber={barber} />}
+          {tab === 'Services' && <ServicesTab />}
+          {tab === 'Schedule' && <ScheduleTab />}
           {tab === 'Profile' && <ProfileTab barber={barber} onChange={reloadBarber} />}
         </>
       )}

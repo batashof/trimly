@@ -11,7 +11,7 @@ Portfolio side project: a booking app for a barbershop.
 - Two interfaces:
   1. **Public booking page** — no auth, reached via the barber's own link (`/book/:barberId`, shared from Instagram). No barber-picker: service → date/time → must leave name and phone.
   2. **Barbershop admin panel** — with auth. A barber logs in as ADMIN and *is* one `Barber` profile, and manages their own profile, services, schedule, and bookings.
-- Scale: barbers **self-register** (public `/register` page, email-verified — see `docs/decisions-log.md`, 2026-07-18), so the app is open multi-barber. Each account maps 1:1 to its own independent `Barber` profile; there is no shop/team grouping. **Known gap:** admin endpoints aren't yet scoped per-barber (`docs/roadmap.md` "Required follow-up") — must be closed before real multi-barber use.
+- Scale: barbers **self-register** (public `/register` page, email-verified — see `docs/decisions-log.md`, 2026-07-18), so the app is open multi-barber. Each account maps 1:1 to its own independent `Barber` profile; there is no shop/team grouping. Admin endpoints are **scoped per-barber** — the barber is resolved from the JWT and each endpoint enforces ownership server-side (see `docs/decisions-log.md`, 2026-07-18 — per-barber authorization scoping).
 - Clients receive a booking notification via a Telegram bot (see `docs/notifications-telegram.md`). The barber doesn't need separate notifications — they check bookings in the panel.
 
 ## 2. Roles
@@ -42,7 +42,7 @@ Full log with dates and rationale — `docs/decisions-log.md`. Short version:
 | Client phone | Required field |
 | Client notifications | Telegram bot with deep link (not SMS, not Viber, not email) |
 | Barber notifications | Not needed in MVP, checked via panel instead |
-| Scale | Open multi-barber self-signup; per-barber endpoint scoping still TODO |
+| Scale | Open multi-barber self-signup; admin endpoints scoped per-barber via the JWT |
 | Documentation & code language | English, for everything |
 
 ## 5. Project documentation structure

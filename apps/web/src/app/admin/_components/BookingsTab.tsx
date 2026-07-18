@@ -44,28 +44,22 @@ function inZone(iso: string, timezone: string) {
   return { date, time, dayKey };
 }
 
-export function BookingsTab({ barbers }: { barbers: Barber[] }) {
+export function BookingsTab({ barber }: { barber: Barber }) {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [barberId, setBarberId] = useState('');
   const [from, setFrom] = useState(todayLocal());
   const [to, setTo] = useState('');
   const [status, setStatus] = useState<StatusFilter>('ALL');
 
-  const tzByBarber = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const b of barbers) map.set(b.id, b.timezone);
-    return map;
-  }, [barbers]);
+  const tz = barber.timezone;
 
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const rows = await api.bookings.list({
-        barberId: barberId || undefined,
         from: from ? `${from}T00:00:00.000Z` : undefined,
         to: to ? `${to}T23:59:59.999Z` : undefined,
       });
@@ -75,7 +69,7 @@ export function BookingsTab({ barbers }: { barbers: Barber[] }) {
     } finally {
       setLoading(false);
     }
-  }, [barberId, from, to]);
+  }, [from, to]);
 
   useEffect(() => {
     void reload();
@@ -86,18 +80,17 @@ export function BookingsTab({ barbers }: { barbers: Barber[] }) {
     [bookings, status],
   );
 
-  // Group by calendar day (in each booking's barber timezone) for a readable list.
+  // Group by calendar day (in the barber's timezone) for a readable list.
   const groups = useMemo(() => {
     const byDay = new Map<string, { label: string; items: AdminBooking[] }>();
     for (const b of visible) {
-      const tz = tzByBarber.get(b.barberId) ?? 'UTC';
       const { date, dayKey } = inZone(b.startAt, tz);
       const group = byDay.get(dayKey) ?? { label: date, items: [] };
       group.items.push(b);
       byDay.set(dayKey, group);
     }
     return [...byDay.entries()].sort(([a], [c]) => a.localeCompare(c)).map(([, g]) => g);
-  }, [visible, tzByBarber]);
+  }, [visible, tz]);
 
   async function changeStatus(id: string, next: 'CANCELLED' | 'COMPLETED') {
     setError(null);
@@ -113,23 +106,6 @@ export function BookingsTab({ barbers }: { barbers: Barber[] }) {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
-        {barbers.length > 1 && (
-          <label className="space-y-1">
-            <span className="block text-xs font-medium text-gray-600">Barber</span>
-            <select
-              value={barberId}
-              onChange={(e) => setBarberId(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">All barbers</option>
-              {barbers.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.displayName}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         <label className="space-y-1">
           <span className="block text-xs font-medium text-gray-600">From</span>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputClass} />
@@ -169,7 +145,6 @@ export function BookingsTab({ barbers }: { barbers: Barber[] }) {
               <h3 className="text-sm font-semibold text-gray-700">{group.label}</h3>
               <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
                 {group.items.map((b) => {
-                  const tz = tzByBarber.get(b.barberId) ?? 'UTC';
                   const { time } = inZone(b.startAt, tz);
                   const end = inZone(b.endAt, tz);
                   return (

@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { OmitType } from '@nestjs/mapped-types';
 import { CreateServiceDto } from './create-service.dto';
 
-// barberId is fixed at creation — a service cannot be reassigned to another barber.
-export class UpdateServiceDto extends PartialType(OmitType(CreateServiceDto, ['barberId'] as const)) {}
+// CreateServiceDto has no barberId (it is resolved from the JWT), so a partial
+// of it is all an update needs.
+export class UpdateServiceDto extends PartialType(CreateServiceDto) {}

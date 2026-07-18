@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { api, type Barber, type DayOff, type WorkingHour } from '../../../lib/api';
+import { api, type DayOff, type WorkingHour } from '../../../lib/api';
 import {
   DeleteButton,
   Empty,
@@ -14,26 +14,17 @@ import {
   WEEKDAYS,
 } from './ui';
 
-export function ScheduleTab({ barbers }: { barbers: Barber[] }) {
-  const [barberId, setBarberId] = useState(barbers[0]?.id ?? '');
+export function ScheduleTab() {
   const [hours, setHours] = useState<WorkingHour[]>([]);
   const [dayOffs, setDayOffs] = useState<DayOff[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const reload = useCallback(async () => {
-    if (!barberId) {
-      setHours([]);
-      setDayOffs([]);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      const [h, d] = await Promise.all([
-        api.workingHours.list(barberId),
-        api.dayOffs.list(barberId),
-      ]);
+      const [h, d] = await Promise.all([api.workingHours.list(), api.dayOffs.list()]);
       setHours(h);
       setDayOffs(d);
     } catch (err) {
@@ -41,7 +32,7 @@ export function ScheduleTab({ barbers }: { barbers: Barber[] }) {
     } finally {
       setLoading(false);
     }
-  }, [barberId]);
+  }, []);
 
   useEffect(() => {
     void reload();
@@ -58,25 +49,8 @@ export function ScheduleTab({ barbers }: { barbers: Barber[] }) {
     return map;
   }, [hours]);
 
-  if (barbers.length === 0) {
-    return <Empty>Create a barber first, then set up their schedule.</Empty>;
-  }
-
   return (
     <div className="space-y-6">
-      {barbers.length > 1 && (
-        <label className="space-y-1">
-          <span className="block text-xs font-medium text-gray-600">Barber</span>
-          <select value={barberId} onChange={(e) => setBarberId(e.target.value)} className={inputClass}>
-            {barbers.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-
       <ErrorBanner message={error} />
 
       <Section title="Working hours">
@@ -107,14 +81,14 @@ export function ScheduleTab({ barbers }: { barbers: Barber[] }) {
                   ))
                 )}
               </div>
-              <AddInterval barberId={barberId} weekday={weekday} onAdded={reload} onError={setError} />
+              <AddInterval weekday={weekday} onAdded={reload} onError={setError} />
             </div>
           ))}
         </div>
       </Section>
 
       <Section title={`Days off (${dayOffs.length})`}>
-        <AddDayOff barberId={barberId} onAdded={reload} onError={setError} />
+        <AddDayOff onAdded={reload} onError={setError} />
         {loading && dayOffs.length === 0 ? (
           <Empty>Loading…</Empty>
         ) : dayOffs.length === 0 ? (
@@ -144,12 +118,10 @@ export function ScheduleTab({ barbers }: { barbers: Barber[] }) {
 }
 
 function AddInterval({
-  barberId,
   weekday,
   onAdded,
   onError,
 }: {
-  barberId: string;
   weekday: number;
   onAdded: () => void;
   onError: (msg: string) => void;
@@ -175,7 +147,7 @@ function AddInterval({
     setBusy(true);
     onError('');
     try {
-      await api.workingHours.create({ barberId, weekday, startTime: start, endTime: end });
+      await api.workingHours.create({ weekday, startTime: start, endTime: end });
       setOpen(false);
       onAdded();
     } catch (err) {
@@ -201,11 +173,9 @@ function AddInterval({
 }
 
 function AddDayOff({
-  barberId,
   onAdded,
   onError,
 }: {
-  barberId: string;
   onAdded: () => void;
   onError: (msg: string) => void;
 }) {
@@ -219,7 +189,7 @@ function AddDayOff({
     setBusy(true);
     onError('');
     try {
-      await api.dayOffs.create({ barberId, date, reason: reason.trim() || undefined });
+      await api.dayOffs.create({ date, reason: reason.trim() || undefined });
       setDate('');
       setReason('');
       onAdded();

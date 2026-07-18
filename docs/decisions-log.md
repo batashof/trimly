@@ -135,3 +135,22 @@ Detailed architecture — `notifications-telegram.md`.
 **Trade-off:** sending `From:` an address on a domain we don't control (e.g. `gmail.com`) means SPF/DKIM don't align with SendGrid, so some mail may land in spam and Gmail/Yahoo bulk-sender rules apply at scale. Acceptable at portfolio volume; a proper fix (own a domain and verify it) is deferred until the project outgrows €0.
 
 **Alternatives considered:** Brevo (also single-sender, 300/day — viable, but SendGrid's API was simpler to drop in); a free domain to verify with Resend (rejected — free registrars like Freenom are effectively dead and offer no reliable DKIM-capable DNS); buying a cheap domain now (rejected — breaks the €0 constraint; revisit later).
+
+## 2026-07-18 — Per-barber authorization scoping (closes the multi-barber cross-tenant hole)
+
+**Decision:** Every admin endpoint that touches barber-owned data now derives the barber **from the JWT**, never from the request. Concretely:
+
+- A new `BarberScopeGuard` (runs after `JwtAuthGuard`) looks up the caller's `Barber` by `userId`, and pins its id on the request; a `@CurrentBarberId()` param decorator reads it. If the account has no linked barber profile the guard returns **403**.
+- `/services`, `/working-hours`, `/day-offs`, and `GET /bookings` are scoped to that id. The `barberId` field was removed from the three create DTOs and from `bookingListQuerySchema` — it can no longer be supplied by the client. List/create/update/delete all operate only within the caller's barber.
+- Ownership on `:id` routes: a row owned by another barber is reported as **404 NotFound** (not 403) so ids can't be probed for existence across tenants. `PATCH/DELETE /barbers/:id` is the exception — it compares against the caller's own barber id and returns **403** when they differ (the caller already knows their own id, so there's nothing to hide).
+- Removed `POST /barbers` and `BarbersService.create`: a `Barber` only ever comes into existence through self-registration (linked 1:1 to a `User`). An admin-created barber would be an orphan (`userId` null), unowned and unmanageable, and the endpoint let any logged-in barber spam profiles.
+
+**Why:** Opening self-registration (2026-07-18 entry above) turned Trimly multi-barber, but the admin endpoints still trusted a client-supplied `barberId`, so any logged-in barber could read or modify another barber's services, schedule, days off, and bookings. This was the "Known limitation — cross-tenant access" flagged in that entry and in `roadmap.md`; it is a prerequisite to promoting self-signup beyond a portfolio demo, so it is now closed.
+
+**Why resolve per-request instead of embedding `barberId` in the JWT:** the guard does one indexed lookup per request (negligible at this volume) and always reflects the live `User → Barber` link. Baking `barberId` into the token would leave 7-day-valid tokens carrying a stale claim if the profile were relinked or removed, and would need a migration for tokens already issued. The 1:1 mapping is stable, but a fresh read is simpler to reason about and has no staleness window.
+
+**404 vs 403 for cross-tenant `:id`:** 404 is the privacy-preserving default — a 403 confirms "this id exists, just not yours," which enables enumeration. The barber-profile writes intentionally use 403 because the caller's own id is the only valid target and is already known to them.
+
+**Frontend impact:** the admin panel already loaded exactly one barber (`GET /barbers/me`) and the speculative multi-barber `<select>` pickers were dead UI, so the tabs (`ServicesTab`, `ScheduleTab`, `BookingsTab`) were simplified to operate on that single barber and the `barberId` query/body params were dropped from `lib/api.ts`.
+
+**Alternatives considered:** put `barberId` in the JWT (rejected — staleness + token migration, see above); return 403 everywhere for cross-tenant access (rejected — leaks resource existence; 404 is safer for foreign `:id`); keep `POST /barbers` but stamp `userId` from the caller (rejected — a user already has exactly one barber from registration, so a second create is meaningless); enforce scoping with a Prisma middleware/global filter (rejected — too implicit; explicit `where: { barberId }` + ownership checks in each service are easier to audit and test).

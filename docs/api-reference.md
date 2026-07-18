@@ -17,7 +17,7 @@ The client booking page is reached through a **per-barber link** (`/book/:barber
 | POST | `/bookings` | Create a booking |
 | GET | `/health` | Health check (for the pinger, to keep Render from sleeping) |
 
-Barber **reads** (`GET /barbers`, `GET /barbers/:id`) are public; barber **writes** stay ADMIN-only (see the Protected table). `GET /barbers/:id/services` is served by a dedicated unguarded controller, mirroring `/barbers/:id/availability`.
+Barber **reads** (`GET /barbers`, `GET /barbers/:id`) are public; barber **writes** stay ADMIN-only (see the Protected table). `GET /barbers/:id/services` is served by a dedicated unguarded controller, mirroring `/barbers/:id/availability`. There is no `POST /barbers` — a `Barber` only ever comes into existence through self-registration (linked 1:1 to its `User`).
 
 ### Barber self-registration — `POST /auth/register` and `POST /auth/register/confirm`
 
@@ -86,17 +86,19 @@ The frontend uses `telegramDeepLink` immediately for the "Get notifications on T
 
 ## Protected (JWT, ADMIN role)
 
+Every barber-owned endpoint below is **scoped to the caller's own barber**, resolved from the JWT (`BarberScopeGuard`) — the barber id is **never** taken from the request body or query. Create bodies (`/services`, `/working-hours`, `/day-offs`) therefore carry **no** `barberId`, and `GET /bookings` has **no** `barberId` filter. A `:id` that belongs to another barber is reported as **404** (not 403) so ids can't be probed across tenants; the barber-profile writes return **403** when the id isn't the caller's own.
+
 | Method | Path | Description |
 |---|---|---|
 | POST | `/auth/login` | Login, returns a JWT |
 | GET | `/auth/me` | Current user |
 | GET | `/barbers/me` | The barber profile owned by the logged-in admin (admin *is* the barber) |
-| POST/PATCH/DELETE | `/barbers` | Barber writes (reads are public — see above) |
-| GET/POST/PATCH/DELETE | `/services` | Service CRUD |
-| GET/POST/PATCH/DELETE | `/working-hours` | Schedule CRUD |
-| GET/POST/PATCH/DELETE | `/day-offs` | Day off CRUD |
-| GET | `/bookings?from=&to=&barberId=` | List bookings with filters |
-| PATCH | `/bookings/:id` | Cancel / mark as completed |
+| PATCH/DELETE | `/barbers/:id` | Barber writes — only the caller's own profile (else 403) |
+| GET/POST/PATCH/DELETE | `/services` | Service CRUD, scoped to the caller's barber |
+| GET/POST/PATCH/DELETE | `/working-hours` | Schedule CRUD, scoped to the caller's barber |
+| GET/POST/PATCH/DELETE | `/day-offs` | Day off CRUD, scoped to the caller's barber |
+| GET | `/bookings?from=&to=` | List the caller's bookings (date filters only) |
+| PATCH | `/bookings/:id` | Cancel / mark completed — only the caller's own booking |
 
 ## Service endpoint (Telegram)
 

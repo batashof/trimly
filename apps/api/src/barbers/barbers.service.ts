@@ -1,20 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Barber } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateBarberDto } from './dto/create-barber.dto';
 import { UpdateBarberDto } from './dto/update-barber.dto';
 
 @Injectable()
 export class BarbersService {
   constructor(private readonly prisma: PrismaService) {}
-
-  create(dto: CreateBarberDto): Promise<Barber> {
-    return this.prisma.barber.create({ data: dto });
-  }
-
-  findAll(): Promise<Barber[]> {
-    return this.prisma.barber.findMany({ orderBy: { createdAt: 'asc' } });
-  }
 
   /** Public listing — only barbers that are currently taking bookings. */
   findAllActive(): Promise<Barber[]> {

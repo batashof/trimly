@@ -131,9 +131,9 @@ export class BookingsService {
     return `https://t.me/${username}?start=${notifyToken}`;
   }
 
-  findAll(query: BookingListQuery): Promise<Booking[]> {
-    const where: Prisma.BookingWhereInput = {};
-    if (query.barberId) where.barberId = query.barberId;
+  /** Admin listing — always scoped to the caller's barber. */
+  findAll(barberId: string, query: BookingListQuery): Promise<Booking[]> {
+    const where: Prisma.BookingWhereInput = { barberId };
     if (query.from || query.to) {
       where.startAt = {};
       if (query.from) where.startAt.gte = new Date(query.from);
@@ -149,9 +149,11 @@ export class BookingsService {
     });
   }
 
-  async update(id: string, dto: UpdateBookingInput): Promise<Booking> {
+  async update(barberId: string, id: string, dto: UpdateBookingInput): Promise<Booking> {
     const existing = await this.prisma.booking.findUnique({ where: { id } });
-    if (!existing) {
+    // A booking owned by another barber is reported as 404, not 403, so ids
+    // can't be probed for existence across tenants.
+    if (!existing || existing.barberId !== barberId) {
       throw new NotFoundException(`Booking ${id} not found`);
     }
     return this.prisma.booking.update({ where: { id }, data: { status: dto.status } });

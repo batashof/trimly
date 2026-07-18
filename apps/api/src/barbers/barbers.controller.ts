@@ -2,39 +2,35 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   Patch,
-  Post,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { BarberScopeGuard } from '../auth/guards/barber-scope.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentBarberId } from '../auth/decorators/current-barber-id.decorator';
 import type { AuthUser } from '../auth/types';
 import { BarbersService } from './barbers.service';
-import { CreateBarberDto } from './dto/create-barber.dto';
 import { UpdateBarberDto } from './dto/update-barber.dto';
 
 /**
  * Barber reads are public — the client booking page (reached via a per-barber
  * link) fetches the barber's profile from GET /barbers/:id. Writes stay
- * ADMIN-only, guarded per method. See docs/decisions-log.md.
+ * ADMIN-only and are scoped to the caller's own profile. There is no create
+ * endpoint: a Barber only ever comes into existence through self-registration
+ * (linked 1:1 to its User). See docs/decisions-log.md.
  */
 @Controller('barbers')
 export class BarbersController {
   constructor(private readonly barbersService: BarbersService) {}
-
-  @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  create(@Body() dto: CreateBarberDto) {
-    return this.barbersService.create(dto);
-  }
 
   /** Public: active barbers only. */
   @Get()
@@ -59,17 +55,30 @@ export class BarbersController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, BarberScopeGuard)
   @Roles(Role.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateBarberDto) {
+  update(
+    @CurrentBarberId() ownBarberId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateBarberDto,
+  ) {
+    this.assertOwnProfile(ownBarberId, id);
     return this.barbersService.update(id, dto);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, BarberScopeGuard)
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
+  remove(@CurrentBarberId() ownBarberId: string, @Param('id') id: string) {
+    this.assertOwnProfile(ownBarberId, id);
     return this.barbersService.remove(id);
+  }
+
+  /** A barber may only write its own profile row. */
+  private assertOwnProfile(ownBarberId: string, targetId: string): void {
+    if (ownBarberId !== targetId) {
+      throw new ForbiddenException('You can only modify your own barber profile');
+    }
   }
 }

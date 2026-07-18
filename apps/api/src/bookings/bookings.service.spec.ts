@@ -112,3 +112,53 @@ describe('BookingsService.create', () => {
     await expect(service.create(baseInput)).rejects.toBeInstanceOf(NotFoundException);
   });
 });
+
+describe('BookingsService admin scoping', () => {
+  let service: BookingsService;
+  let prisma: {
+    booking: {
+      findMany: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+    };
+  };
+
+  beforeEach(() => {
+    prisma = {
+      booking: { findMany: vi.fn().mockResolvedValue([]), findUnique: vi.fn(), update: vi.fn() },
+    };
+    const availability = { getAvailability: vi.fn() };
+    const config = { get: vi.fn() };
+    service = new BookingsService(
+      prisma as unknown as PrismaService,
+      availability as unknown as AvailabilityService,
+      config as unknown as ConfigService,
+    );
+  });
+
+  it('always scopes findAll to the caller barber', async () => {
+    await service.findAll('b1', { from: '2026-01-01T00:00:00.000Z' } as never);
+    const arg = prisma.booking.findMany.mock.calls[0][0];
+    expect(arg.where.barberId).toBe('b1');
+    expect(arg.where.startAt.gte).toBeInstanceOf(Date);
+  });
+
+  it('hides another barber booking on update (404, not 403)', async () => {
+    prisma.booking.findUnique.mockResolvedValue({ id: 'bk1', barberId: 'other-barber' });
+    await expect(
+      service.update('b1', 'bk1', { status: 'CANCELLED' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.booking.update).not.toHaveBeenCalled();
+  });
+
+  it('updates the caller own booking', async () => {
+    prisma.booking.findUnique.mockResolvedValue({ id: 'bk1', barberId: 'b1' });
+    prisma.booking.update.mockResolvedValue({ id: 'bk1', status: 'COMPLETED' });
+    const result = await service.update('b1', 'bk1', { status: 'COMPLETED' });
+    expect(result.status).toBe('COMPLETED');
+    expect(prisma.booking.update).toHaveBeenCalledWith({
+      where: { id: 'bk1' },
+      data: { status: 'COMPLETED' },
+    });
+  });
+});

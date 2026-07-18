@@ -8,14 +8,13 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 export class ServicesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateServiceDto): Promise<Service> {
-    await this.ensureBarberExists(dto.barberId);
-    return this.prisma.service.create({ data: dto });
+  create(barberId: string, dto: CreateServiceDto): Promise<Service> {
+    return this.prisma.service.create({ data: { ...dto, barberId } });
   }
 
-  findAll(barberId?: string): Promise<Service[]> {
+  findAll(barberId: string): Promise<Service[]> {
     return this.prisma.service.findMany({
-      where: barberId ? { barberId } : undefined,
+      where: { barberId },
       orderBy: { name: 'asc' },
     });
   }
@@ -28,28 +27,30 @@ export class ServicesService {
     });
   }
 
-  async findOne(id: string): Promise<Service> {
-    const service = await this.prisma.service.findUnique({ where: { id } });
-    if (!service) {
-      throw new NotFoundException(`Service ${id} not found`);
-    }
-    return service;
+  findOne(barberId: string, id: string): Promise<Service> {
+    return this.findOwned(barberId, id);
   }
 
-  async update(id: string, dto: UpdateServiceDto): Promise<Service> {
-    await this.findOne(id);
+  async update(barberId: string, id: string, dto: UpdateServiceDto): Promise<Service> {
+    await this.findOwned(barberId, id);
     return this.prisma.service.update({ where: { id }, data: dto });
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(barberId: string, id: string): Promise<void> {
+    await this.findOwned(barberId, id);
     await this.prisma.service.delete({ where: { id } });
   }
 
-  private async ensureBarberExists(barberId: string): Promise<void> {
-    const barber = await this.prisma.barber.findUnique({ where: { id: barberId } });
-    if (!barber) {
-      throw new NotFoundException(`Barber ${barberId} not found`);
+  /**
+   * Loads a service only if it belongs to the caller's barber. A row owned by
+   * another barber is reported as 404 (not 403) so ids can't be probed for
+   * existence across tenants.
+   */
+  private async findOwned(barberId: string, id: string): Promise<Service> {
+    const service = await this.prisma.service.findUnique({ where: { id } });
+    if (!service || service.barberId !== barberId) {
+      throw new NotFoundException(`Service ${id} not found`);
     }
+    return service;
   }
 }
