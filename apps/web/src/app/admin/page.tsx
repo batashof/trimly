@@ -183,11 +183,14 @@ function Dashboard({ user, onLogout }: { user: AuthUser; onLogout: () => void })
                     · {b.timezone} · {b.isActive ? 'active' : 'inactive'}
                   </span>
                 </span>
-                <DeleteButton
-                  onDelete={() => api.barbers.remove(b.id)}
-                  onDone={reload}
-                  onError={setError}
-                />
+                <div className="flex items-center gap-1">
+                  <CopyBookingLink barberId={b.id} />
+                  <DeleteButton
+                    onDelete={() => api.barbers.remove(b.id)}
+                    onDone={reload}
+                    onError={setError}
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -376,6 +379,28 @@ function CreateService({
         Add service
       </button>
     </form>
+  );
+}
+
+/** The barber's personal booking link — this is what they share with clients. */
+function CopyBookingLink({ barberId }: { barberId: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={async () => {
+        const url = `${window.location.origin}/book/${barberId}`;
+        try {
+          await navigator.clipboard.writeText(url);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          window.prompt('Copy your booking link:', url);
+        }
+      }}
+      className="rounded-md px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
+    >
+      {copied ? 'Copied!' : 'Copy link'}
+    </button>
   );
 }
 
