@@ -47,10 +47,11 @@ services:
         sync: false
       - key: JWT_EXPIRES_IN
         value: "7d"
-      # Barber self-registration email (see docs/architecture.md). Resend API key
-      # and sender are dashboard-filled; leaving RESEND_API_KEY unset makes the
+      # Barber self-registration email (see docs/architecture.md). SendGrid API key
+      # and sender are dashboard-filled; leaving SENDGRID_API_KEY unset makes the
       # API log the confirmation link instead of sending it (dev fallback).
-      - key: RESEND_API_KEY
+      # EMAIL_FROM must be a SendGrid Single Sender-verified address.
+      - key: SENDGRID_API_KEY
         sync: false
       - key: EMAIL_FROM
         sync: false
