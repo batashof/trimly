@@ -18,6 +18,7 @@ One Next.js app serves both surfaces: the public booking page (root routes) and 
 - **class-validator / class-transformer** — DTO validation
 - Guards with the `@Roles(ADMIN)` decorator — structure designed to support adding roles later without rework
 - **grammY** — Telegram bot (see `notifications-telegram.md`), runs as a module inside the same Nest process
+- **Email (Resend)** — transactional email for barber self-registration (the confirmation link). Sent via the Resend REST API over `fetch` (no SDK dependency). When `RESEND_API_KEY` is unset the `EmailService` falls back to logging the link to the console, so local dev works without an account. Env: `RESEND_API_KEY`, `EMAIL_FROM`, `WEB_APP_URL` (base URL used to build the confirmation link). This is the app's *only* email use — client notifications stay on Telegram (see `decisions-log.md`, 2026-07-17 — client notifications).
 
 ## Database
 

@@ -27,10 +27,31 @@ enum BookingStatus {
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
-  passwordHash String
+  // Nullable: a self-registered account exists (unverified) before its owner
+  // sets a password via the email-confirmation link. See docs/data-model.md.
+  passwordHash String?
   role         Role     @default(ADMIN)
-  barber       Barber?
-  createdAt    DateTime @default(now())
+  // Set when the confirmation link is used; null means the email is unverified
+  // and the account cannot log in (and has no Barber profile yet).
+  emailVerifiedAt    DateTime?
+  barber             Barber?
+  verificationTokens EmailVerificationToken[]
+  createdAt          DateTime @default(now())
+}
+
+// Single-use, time-boxed token backing the barber self-registration email link.
+// Only the sha256 hash is stored — the raw token lives solely in the emailed URL,
+// so a DB leak can't be turned into a working link. See docs/decisions-log.md.
+model EmailVerificationToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Barber {

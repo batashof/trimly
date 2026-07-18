@@ -8,6 +8,8 @@ The client booking page is reached through a **per-barber link** (`/book/:barber
 
 | Method | Path | Description |
 |---|---|---|
+| POST | `/auth/register` | Start barber self-registration — send a confirmation email |
+| POST | `/auth/register/confirm` | Finish registration — set the password from the emailed token, auto-login |
 | GET | `/barbers` | List of active barbers |
 | GET | `/barbers/:id` | Single barber's public profile (name, bio, photo, timezone) — booking page header |
 | GET | `/barbers/:id/services` | Barber's active services |
@@ -16,6 +18,41 @@ The client booking page is reached through a **per-barber link** (`/book/:barber
 | GET | `/health` | Health check (for the pinger, to keep Render from sleeping) |
 
 Barber **reads** (`GET /barbers`, `GET /barbers/:id`) are public; barber **writes** stay ADMIN-only (see the Protected table). `GET /barbers/:id/services` is served by a dedicated unguarded controller, mirroring `/barbers/:id/availability`.
+
+### Barber self-registration — `POST /auth/register` and `POST /auth/register/confirm`
+
+A barber creates their own account with a two-step, email-verified flow (see `docs/decisions-log.md`, 2026-07-18 — barber self-registration):
+
+`POST /auth/register` — request (validated by the shared `registerSchema`):
+
+```json
+{ "email": "barber@example.com" }
+```
+
+Response is always a generic `200` regardless of whether the email was new, unverified, or already registered — the endpoint never reveals whether an address exists:
+
+```json
+{ "ok": true }
+```
+
+For a new (or still-unverified) email it creates an unverified `User` (no password yet), issues a single-use `EmailVerificationToken` (24h expiry, stored hashed), and emails a link to `${WEB_APP_URL}/register/confirm?token=<rawToken>`. The `Barber` profile is **not** created yet.
+
+`POST /auth/register/confirm` — request (validated by the shared `registerConfirmSchema`):
+
+```json
+{ "token": "<rawToken from the email link>", "password": "min-8-chars" }
+```
+
+Validates the token (exists, not consumed, not expired), sets the password (bcrypt), marks the account verified, consumes the token, and creates the linked `Barber` profile (display name defaulted from the email local-part). Returns the same shape as `POST /auth/login`, so the web app stores the JWT and lands the new barber straight in the admin panel:
+
+```json
+{
+  "accessToken": "<jwt>",
+  "user": { "id": "user_id", "email": "barber@example.com", "role": "ADMIN" }
+}
+```
+
+An invalid, expired, or already-used token returns `400`.
 
 ### `POST /bookings` — contract
 

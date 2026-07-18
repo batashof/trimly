@@ -9,12 +9,20 @@ export default function HomePage() {
         (<code className="rounded bg-gray-100 px-1 py-0.5">/book/&lt;barberId&gt;</code>). A barber
         finds and shares their link from the admin console.
       </p>
-      <Link
-        href="/admin"
-        className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
-      >
-        Admin console
-      </Link>
+      <div className="flex items-center gap-3">
+        <Link
+          href="/admin"
+          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+        >
+          Admin console
+        </Link>
+        <Link
+          href="/register"
+          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50"
+        >
+          Register as a barber
+        </Link>
+      </div>
     </main>
   );
 }

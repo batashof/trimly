@@ -16,12 +16,26 @@ enum BookingStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(ADMIN)
-  barber       Barber?
-  createdAt    DateTime @default(now())
+  id                 String                   @id @default(cuid())
+  email              String                   @unique
+  passwordHash       String?                  // null until the barber sets a password via the email-confirmation link
+  role               Role                     @default(ADMIN)
+  emailVerifiedAt    DateTime?                // set when the confirmation link is used
+  barber             Barber?
+  verificationTokens EmailVerificationToken[]
+  createdAt          DateTime                 @default(now())
+}
+
+model EmailVerificationToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique // sha256 of the random token; the raw token only ever lives in the email link
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  expiresAt  DateTime
+  consumedAt DateTime? // set once the link is used; a consumed or expired token is rejected
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Barber {
@@ -87,7 +101,9 @@ model Booking {
 
 ## Key modeling decisions
 
-**`Barber` is linked 1:1 to `User` via `Barber.userId`.** The shop is one person: the owner logs in as ADMIN and *is* the single barber — one account, one profile. There is no "create barbers" flow; the seed creates the admin User and its Barber together, and the admin panel edits that one profile (`GET /barbers/me` resolves it from the JWT). The relation is optional (`userId String?`) with `onDelete: SetNull` so barber data and its bookings survive if the account is deleted, and so a future `BARBER`-role master (extra masters with their own login) can be added without reworking the model.
+**`Barber` is linked 1:1 to `User` via `Barber.userId`.** Each barber logs in as ADMIN and *is* one `Barber` profile — one account, one profile. Accounts are created by **self-registration** (`POST /auth/register` → email confirmation → set password; see `api-reference.md` and the decisions log entry), which creates the `User` and its linked `Barber` together; the seed still creates the initial owner account the same way. The admin panel edits that one profile (`GET /barbers/me` resolves it from the JWT). The relation is optional (`userId String?`) with `onDelete: SetNull` so barber data and its bookings survive if the account is deleted.
+
+**Self-registration and email verification.** `User.passwordHash` is **nullable**: `POST /auth/register` creates an unverified `User` with no password and issues an `EmailVerificationToken`, so an account can exist before a password is set. `User.emailVerifiedAt` and the token's `consumedAt` are both set when the confirmation link is used, at which point the password is stored and the linked `Barber` profile is created. Unverified users (null `passwordHash`, no `emailVerifiedAt`) therefore **cannot log in** and have **no `Barber` row**, so they never appear in the public `GET /barbers` list. The token is stored **hashed** (sha256) — the raw token only ever travels in the email link — so a database leak can't be turned into a usable confirmation link; tokens also carry an `expiresAt` (24h) and are single-use (`consumedAt`).
 
 **`Service` belongs to a specific barber, not to the shop as a whole.** Different masters can have different prices and durations for the same service (e.g. a "haircut" might be 30 min / €20 with one barber and 45 min / €25 with another).
 
