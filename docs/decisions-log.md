@@ -101,3 +101,11 @@ Detailed architecture — `notifications-telegram.md`.
 **Why:** Prisma is already a dependency, so Studio is a zero-config, €0 web UI over every table with no code to write, deploy, or secure. It runs locally against the Neon connection string (or Neon's own console works against production directly). A full embedded admin (AdminJS/Forest Admin) would add a dependency, routes, and an auth surface to maintain — overkill for a single-owner portfolio app.
 
 **Alternatives considered:** AdminJS/Forest Admin embedded in NestJS (rejected — extra deploy/auth surface for one user); the Neon console SQL editor only (kept as the production-facing option in the doc, but Studio is friendlier for local edits); a bespoke `/admin/dev` UI (rejected — reinventing Studio).
+
+## 2026-07-18 — Render build goes through Turbo so @trimly/shared is compiled first
+
+**Decision:** The Render `buildCommand` builds the API via `pnpm turbo run build --filter @trimly/api` instead of `pnpm --filter @trimly/api build`. Turbo honours the `^build` dependency in `turbo.json`, so the `@trimly/shared` workspace package is compiled to its `dist/` before `nest build` runs for `@trimly/api`.
+
+**Why:** `@trimly/api` imports `@trimly/shared`, whose `package.json` resolves `main`/`types` to `./dist/index.js` / `./dist/index.d.ts`. On a fresh Render checkout that `dist/` doesn't exist, and `pnpm --filter @trimly/api build` runs `nest build` directly — it never builds the dependency — so the deploy failed with `TS2307: Cannot find module '@trimly/shared'` (plus cascading `TS7006` implicit-any where the missing types left `availability`/`slot` untyped). It passed locally only because a prior `pnpm build` had left `packages/shared/dist` on disk. Routing the build through Turbo makes the dependency ordering explicit and reproducible.
+
+**Alternatives considered:** `pnpm --filter "@trimly/api..." build` (the `...` suffix pulls in dependencies) — works, but Turbo is already the repo's build orchestrator and the `^build` graph lives in `turbo.json`, so going through Turbo keeps one source of truth for build ordering; adding a `prebuild` step to `apps/api` that builds `@trimly/shared` (rejected — duplicates the dependency graph Turbo already models).

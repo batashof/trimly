@@ -17,8 +17,12 @@ environments point at the same `DATABASE_URL`; no separate prod seeding needed.
    - `DATABASE_URL` — pooled Neon connection.
    - `DIRECT_URL` — direct Neon connection (used by `prisma migrate deploy` at build).
    - `JWT_SECRET` — the same long random string as local.
-3. First deploy runs: `prisma generate` → `prisma migrate deploy` → `nest build`,
-   then starts on Render's injected `$PORT`. Verify: `GET https://<service>.onrender.com/health`.
+3. First deploy runs: `prisma generate` → `prisma migrate deploy` →
+   `turbo run build --filter @trimly/api`, then starts on Render's injected `$PORT`.
+   Verify: `GET https://<service>.onrender.com/health`. The build goes through Turbo
+   (not `nest build` directly) so the `@trimly/shared` workspace package is compiled
+   to its `dist/` first — building `@trimly/api` alone fails with
+   `Cannot find module '@trimly/shared'`.
 
 > The live service is **`https://trimly-api-npk6.onrender.com`**. Render appended
 > `-npk6` because the plain `trimly-api.onrender.com` hostname was already taken —
