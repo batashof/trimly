@@ -1,0 +1,40 @@
+# Render Blueprint for the Trimly API (NestJS).
+#
+# The web frontend is deployed separately on Vercel (see docs/architecture.md);
+# this file only provisions the backend. Import it in the Render dashboard via
+# "New +" → "Blueprint" and point it at this repo. Render reads the build/start
+# commands from here; the secrets below (sync: false) are filled in the dashboard
+# on first deploy — Render never stores them in git.
+#
+# Runs from the repo root (no rootDir) so pnpm can resolve the workspace, then
+# filters to @trimly/api. Prisma client is generated and migrations applied at
+# build time; the API listens on Render's injected $PORT (see apps/api/src/main.ts).
+services:
+  - type: web
+    name: trimly-api
+    runtime: node
+    region: frankfurt # same region as the Neon DB (eu-central-1)
+    plan: free
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @trimly/api prisma:generate &&
+      pnpm --filter @trimly/api prisma:deploy &&
+      pnpm --filter @trimly/api build
+    startCommand: pnpm --filter @trimly/api start:prod
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Pooled Neon connection used by the app at runtime.
+      - key: DATABASE_URL
+        sync: false
+      # Direct (non-pooled) Neon connection used by Prisma Migrate.
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: "7d"
