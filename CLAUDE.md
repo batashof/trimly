@@ -48,3 +48,4 @@ Requires Node >= 20 and pnpm (see `packageManager` in `package.json`).
 - TypeScript everywhere. Share validation via Zod schemas in `packages/*` so web and api stay in sync — don't duplicate contracts.
 - Timezone-sensitive logic (slot calculation) compares in the barber's timezone, not the server's — see [docs/business-logic.md](docs/business-logic.md).
 - Keep changes aligned with the roadmap order in [docs/roadmap.md](docs/roadmap.md).
+- Language: all repository artifacts (docs, code, comments, commit messages) are English. Chat replies to the owner are in Russian; reasoning may be in English. See [trimly-project-plan.md](trimly-project-plan.md) §6.

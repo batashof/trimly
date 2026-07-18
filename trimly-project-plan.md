@@ -62,4 +62,6 @@ docs/
 
 ## 6. Language policy
 
-All project documentation, all instructions given to Claude within this project, and everything related to code — code itself, comments, identifiers, commit messages, error/log messages, README files — must be written in **English**. See `docs/decisions-log.md` (2026-07-17 — Documentation and code language) for the rationale.
+All project **artifacts** — documentation, code itself, comments, identifiers, commit messages, error/log messages, README files — must be written in **English**. See `docs/decisions-log.md` (2026-07-17 — Documentation and code language) for the rationale.
+
+**Exception — chat conversation:** Claude's chat replies to the owner are written in **Russian**. Claude may reason/think in English to save tokens, but everything it writes into the repository stays English per the rule above.
