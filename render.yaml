@@ -16,7 +16,10 @@ services:
     region: frankfurt # same region as the Neon DB (eu-central-1)
     plan: free
     branch: main
-    autoDeploy: true
+    # Git auto-deploy is OFF: deploys are triggered by the GitHub Actions `deploy`
+    # job via a deploy hook, but only after CI (lint + typecheck + test) passes.
+    # This keeps a red build from reaching production. See .github/workflows/ci.yml.
+    autoDeploy: false
     healthCheckPath: /health
     buildCommand: >-
       corepack enable &&

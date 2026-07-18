@@ -36,3 +36,30 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  # Deploy only after `build` (lint + typecheck + test) is green, and only on a
+  # real push to main — never on PRs. Render and Vercel git auto-deploy is turned
+  # off (see render.yaml autoDeploy:false and apps/web/vercel.json), so these
+  # deploy hooks are the single path to production: a red CI never ships.
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render (API) deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK secret is not set"; exit 1
+          fi
+          curl -fsS -X POST "$HOOK"
+
+      - name: Trigger Vercel (web) deploy
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::VERCEL_DEPLOY_HOOK secret is not set"; exit 1
+          fi
+          curl -fsS -X POST "$HOOK"

@@ -38,8 +38,27 @@ environments point at the same `DATABASE_URL`; no separate prod seeding needed.
    Vercel origin. `NEXT_PUBLIC_*` is inlined at build time, so redeploy after changing it.
 4. Deploy. The public page is at `/`, the admin console at `/admin`.
 
-## Auto-deploy
+## Deploys are gated on CI
 
-Both platforms watch `main`: every merge triggers a redeploy. CORS on the API is
-currently open (`enableCors()` in `apps/api/src/main.ts`) — tighten to the Vercel
-origin before this is anything more than a portfolio demo.
+Git auto-deploy is **off** on both platforms (`autoDeploy: false` in
+[`render.yaml`](../render.yaml), `git.deploymentEnabled.main: false` in
+[`apps/web/vercel.json`](../apps/web/vercel.json)). Production deploys are fired by
+the GitHub Actions `deploy` job ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)),
+which runs **only after** `lint + typecheck + test` pass on a push to `main`. A red
+build never ships.
+
+### One-time setup (dashboard + GitHub secrets)
+
+1. **Render** → service **Settings** → **Deploy Hook** → copy the URL.
+2. **Vercel** → project **Settings** → **Git** → **Deploy Hooks** → create one for
+   branch `main`, copy the URL.
+3. **GitHub** → repo **Settings** → **Secrets and variables** → **Actions** → add:
+   - `RENDER_DEPLOY_HOOK` = the Render hook URL.
+   - `VERCEL_DEPLOY_HOOK` = the Vercel hook URL.
+
+After this, every push to `main` runs CI; if green, the `deploy` job POSTs both
+hooks and the platforms rebuild. To ship a manual deploy, POST the hook yourself or
+use the platform dashboard.
+
+> CORS on the API is currently open (`enableCors()` in `apps/api/src/main.ts`) —
+> tighten to the Vercel origin before this is anything more than a portfolio demo.
