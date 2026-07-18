@@ -1,5 +1,5 @@
-import { OmitType, PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/mapped-types';
 import { CreateDayOffDto } from './create-day-off.dto';
 
-// barberId is fixed at creation.
-export class UpdateDayOffDto extends PartialType(OmitType(CreateDayOffDto, ['barberId'] as const)) {}
+// CreateDayOffDto has no barberId (resolved from the JWT).
+export class UpdateDayOffDto extends PartialType(CreateDayOffDto) {}

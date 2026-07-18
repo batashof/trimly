@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { api, type Barber, type Service } from '../../../lib/api';
+import { api, type Service } from '../../../lib/api';
 import {
   Card,
   DeleteButton,
@@ -15,53 +15,31 @@ import {
   Section,
 } from './ui';
 
-export function ServicesTab({ barbers }: { barbers: Barber[] }) {
-  const [barberId, setBarberId] = useState(barbers[0]?.id ?? '');
+export function ServicesTab() {
   const [services, setServices] = useState<Service[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const reload = useCallback(async () => {
-    if (!barberId) {
-      setServices([]);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      setServices(await api.services.list(barberId));
+      setServices(await api.services.list());
     } catch (err) {
       setError(errMessage(err, 'Failed to load services'));
     } finally {
       setLoading(false);
     }
-  }, [barberId]);
+  }, []);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  if (barbers.length === 0) {
-    return <Empty>Create a barber first, then add services.</Empty>;
-  }
-
   return (
     <div className="space-y-6">
-      {barbers.length > 1 && (
-        <label className="space-y-1">
-          <span className="block text-xs font-medium text-gray-600">Barber</span>
-          <select value={barberId} onChange={(e) => setBarberId(e.target.value)} className={inputClass}>
-            {barbers.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-
       <ErrorBanner message={error} />
-      <CreateService barberId={barberId} onCreated={reload} onError={setError} />
+      <CreateService onCreated={reload} onError={setError} />
 
       <Section title={`Services (${services.length})`}>
         {loading && services.length === 0 ? (
@@ -81,11 +59,9 @@ export function ServicesTab({ barbers }: { barbers: Barber[] }) {
 }
 
 function CreateService({
-  barberId,
   onCreated,
   onError,
 }: {
-  barberId: string;
   onCreated: () => void;
   onError: (msg: string) => void;
 }) {
@@ -101,7 +77,6 @@ function CreateService({
     onError('');
     try {
       await api.services.create({
-        barberId,
         name: name.trim(),
         durationMinutes: Number(duration),
         price: Number(price),

@@ -6,7 +6,6 @@ import { PrismaService } from '../prisma/prisma.service';
 describe('WorkingHoursService', () => {
   let service: WorkingHoursService;
   let prisma: {
-    barber: { findUnique: ReturnType<typeof vi.fn> };
     workingHours: {
       create: ReturnType<typeof vi.fn>;
       findUnique: ReturnType<typeof vi.fn>;
@@ -16,36 +15,25 @@ describe('WorkingHoursService', () => {
 
   beforeEach(() => {
     prisma = {
-      barber: { findUnique: vi.fn() },
       workingHours: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     };
     service = new WorkingHoursService(prisma as unknown as PrismaService);
   });
 
-  it('rejects creation for an unknown barber', async () => {
-    prisma.barber.findUnique.mockResolvedValue(null);
-    await expect(
-      service.create({ barberId: 'nope', weekday: 1, startTime: '09:00', endTime: '18:00' }),
-    ).rejects.toBeInstanceOf(NotFoundException);
-    expect(prisma.workingHours.create).not.toHaveBeenCalled();
-  });
-
   it('rejects a non-positive interval (start >= end)', async () => {
-    prisma.barber.findUnique.mockResolvedValue({ id: 'b1' });
     await expect(
-      service.create({ barberId: 'b1', weekday: 1, startTime: '18:00', endTime: '09:00' }),
+      service.create('b1', { weekday: 1, startTime: '18:00', endTime: '09:00' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.workingHours.create).not.toHaveBeenCalled();
   });
 
-  it('creates a valid interval', async () => {
-    prisma.barber.findUnique.mockResolvedValue({ id: 'b1' });
+  it('creates a valid interval, stamping the caller barber id', async () => {
     const created = { id: 'wh1', barberId: 'b1', weekday: 1, startTime: '09:00', endTime: '18:00' };
     prisma.workingHours.create.mockResolvedValue(created);
 
-    const dto = { barberId: 'b1', weekday: 1, startTime: '09:00', endTime: '18:00' };
-    expect(await service.create(dto)).toBe(created);
-    expect(prisma.workingHours.create).toHaveBeenCalledWith({ data: dto });
+    const dto = { weekday: 1, startTime: '09:00', endTime: '18:00' };
+    expect(await service.create('b1', dto)).toBe(created);
+    expect(prisma.workingHours.create).toHaveBeenCalledWith({ data: { ...dto, barberId: 'b1' } });
   });
 
   it('validates the merged interval on update', async () => {
@@ -57,9 +45,25 @@ describe('WorkingHoursService', () => {
       endTime: '18:00',
     });
     // New startTime 19:00 vs existing endTime 18:00 → invalid.
-    await expect(service.update('wh1', { startTime: '19:00' })).rejects.toBeInstanceOf(
+    await expect(service.update('b1', 'wh1', { startTime: '19:00' })).rejects.toBeInstanceOf(
       BadRequestException,
     );
+    expect(prisma.workingHours.update).not.toHaveBeenCalled();
+  });
+
+  it('hides a row owned by another barber (404, not 403)', async () => {
+    prisma.workingHours.findUnique.mockResolvedValue({
+      id: 'wh1',
+      barberId: 'other-barber',
+      weekday: 1,
+      startTime: '09:00',
+      endTime: '18:00',
+    });
+    // Caller b1 must not be able to touch other-barber's row.
+    await expect(service.update('b1', 'wh1', { startTime: '10:00' })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(service.remove('b1', 'wh1')).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.workingHours.update).not.toHaveBeenCalled();
   });
 });

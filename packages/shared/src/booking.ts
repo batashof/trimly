@@ -44,13 +44,13 @@ export const bookingConfirmationSchema = z.object({
 export type BookingConfirmation = z.infer<typeof bookingConfirmationSchema>;
 
 /**
- * Query for GET /bookings (admin). All filters are optional; `from`/`to` bound
- * the booking `startAt` (ISO-8601 UTC), `barberId` narrows to one barber.
+ * Query for GET /bookings (admin). The barber is resolved from the JWT
+ * server-side — never a query param — so only the date filters live here;
+ * `from`/`to` bound the booking `startAt` (ISO-8601 UTC).
  */
 export const bookingListQuerySchema = z.object({
   from: z.string().datetime({ offset: false }).optional(),
   to: z.string().datetime({ offset: false }).optional(),
-  barberId: z.string().min(1).optional(),
 });
 
 export type BookingListQuery = z.infer<typeof bookingListQuerySchema>;

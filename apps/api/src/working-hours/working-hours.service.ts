@@ -8,37 +8,32 @@ import { UpdateWorkingHoursDto } from './dto/update-working-hours.dto';
 export class WorkingHoursService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateWorkingHoursDto): Promise<WorkingHours> {
-    await this.ensureBarberExists(dto.barberId);
+  async create(barberId: string, dto: CreateWorkingHoursDto): Promise<WorkingHours> {
     this.assertStartBeforeEnd(dto.startTime, dto.endTime);
-    return this.prisma.workingHours.create({ data: dto });
+    return this.prisma.workingHours.create({ data: { ...dto, barberId } });
   }
 
-  findAll(barberId?: string): Promise<WorkingHours[]> {
+  findAll(barberId: string): Promise<WorkingHours[]> {
     return this.prisma.workingHours.findMany({
-      where: barberId ? { barberId } : undefined,
+      where: { barberId },
       orderBy: [{ weekday: 'asc' }, { startTime: 'asc' }],
     });
   }
 
-  async findOne(id: string): Promise<WorkingHours> {
-    const entry = await this.prisma.workingHours.findUnique({ where: { id } });
-    if (!entry) {
-      throw new NotFoundException(`Working hours ${id} not found`);
-    }
-    return entry;
+  findOne(barberId: string, id: string): Promise<WorkingHours> {
+    return this.findOwned(barberId, id);
   }
 
-  async update(id: string, dto: UpdateWorkingHoursDto): Promise<WorkingHours> {
-    const existing = await this.findOne(id);
+  async update(barberId: string, id: string, dto: UpdateWorkingHoursDto): Promise<WorkingHours> {
+    const existing = await this.findOwned(barberId, id);
     const startTime = dto.startTime ?? existing.startTime;
     const endTime = dto.endTime ?? existing.endTime;
     this.assertStartBeforeEnd(startTime, endTime);
     return this.prisma.workingHours.update({ where: { id }, data: dto });
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(barberId: string, id: string): Promise<void> {
+    await this.findOwned(barberId, id);
     await this.prisma.workingHours.delete({ where: { id } });
   }
 
@@ -48,10 +43,12 @@ export class WorkingHoursService {
     }
   }
 
-  private async ensureBarberExists(barberId: string): Promise<void> {
-    const barber = await this.prisma.barber.findUnique({ where: { id: barberId } });
-    if (!barber) {
-      throw new NotFoundException(`Barber ${barberId} not found`);
+  /** Loads a row only if it belongs to the caller's barber; 404 otherwise. */
+  private async findOwned(barberId: string, id: string): Promise<WorkingHours> {
+    const entry = await this.prisma.workingHours.findUnique({ where: { id } });
+    if (!entry || entry.barberId !== barberId) {
+      throw new NotFoundException(`Working hours ${id} not found`);
     }
+    return entry;
   }
 }

@@ -10,9 +10,9 @@
 8. UI polish, basic unit tests for slot logic and double booking
 9. Barber self-registration — public `/register` page, email-verified account creation (Resend), password set on `/register/confirm`, auto-login. Turns the app from single-owner into open multi-barber self-signup (see `decisions-log.md`, 2026-07-18 — barber self-registration).
 
-## Required follow-up — per-barber authorization scoping
+## Required follow-up — per-barber authorization scoping ✅ done (2026-07-18)
 
-Opening self-registration made the app multi-barber, but the admin write endpoints are **not yet scoped to the caller's own barber**: `/services`, `/working-hours`, `/day-offs`, and `GET /bookings` take a `barberId` from the client, and `PATCH/DELETE /barbers/:id` and `PATCH /bookings/:id` accept any id. Any logged-in barber can therefore read or modify another barber's data. This was acceptable under the single-owner model but is a cross-tenant access hole now that anyone can register. **Before promoting self-signup to real use**, resolve the caller's barber from the JWT and reject operations on rows they don't own (server-side ownership checks, not a client-supplied `barberId`). Tracked here so it isn't forgotten.
+Opening self-registration made the app multi-barber, but the admin write endpoints were not scoped to the caller's own barber, so any logged-in barber could read or modify another's data. **Closed 2026-07-18:** a `BarberScopeGuard` resolves the caller's barber from the JWT and every admin endpoint (`/services`, `/working-hours`, `/day-offs`, `/bookings`, `PATCH/DELETE /barbers/:id`) now enforces ownership server-side — the client no longer supplies a `barberId`. Foreign `:id` → 404; the barber-profile writes → 403. See `docs/decisions-log.md` (2026-07-18 — per-barber authorization scoping) and the Protected table in `docs/api-reference.md`.
 
 ## Deliberately out of scope for the MVP (but accounted for in the architecture, doesn't block adding later)
 
