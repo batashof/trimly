@@ -20,6 +20,10 @@ environments point at the same `DATABASE_URL`; no separate prod seeding needed.
 3. First deploy runs: `prisma generate` → `prisma migrate deploy` → `nest build`,
    then starts on Render's injected `$PORT`. Verify: `GET https://<service>.onrender.com/health`.
 
+> The live service is **`https://trimly-api-npk6.onrender.com`**. Render appended
+> `-npk6` because the plain `trimly-api.onrender.com` hostname was already taken —
+> always copy the real URL from the service page, don't assume it matches the name.
+
 > Free tier sleeps after 15 min idle (30–50 s cold start). Keep it warm for demos
 > with an external pinger hitting `/health` every 10 min — see [architecture.md](architecture.md).
 
@@ -28,7 +32,10 @@ environments point at the same `DATABASE_URL`; no separate prod seeding needed.
 1. Vercel → **Add New** → **Project** → import this repo.
 2. **Root Directory:** `apps/web` (Vercel auto-detects Next.js and pnpm workspace).
 3. **Environment variable:** `NEXT_PUBLIC_API_URL` = the Render API URL from step 1
-   (e.g. `https://trimly-api.onrender.com`). No trailing slash.
+   (`https://trimly-api-npk6.onrender.com`). No trailing slash, and it **must**
+   include the `https://` scheme — a value without a scheme (e.g. a bare host or IP)
+   is treated as a relative path by the browser and every API call 404s off the
+   Vercel origin. `NEXT_PUBLIC_*` is inlined at build time, so redeploy after changing it.
 4. Deploy. The public page is at `/`, the admin console at `/admin`.
 
 ## Auto-deploy
