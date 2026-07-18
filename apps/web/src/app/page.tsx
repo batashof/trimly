@@ -5,8 +5,9 @@ export default function HomePage() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
       <h1 className="text-4xl font-bold tracking-tight">Trimly</h1>
       <p className="max-w-md text-gray-600">
-        The public booking page will live here. Scaffolding is in place — see the roadmap in{' '}
-        <code className="rounded bg-gray-100 px-1 py-0.5">docs/roadmap.md</code>.
+        Booking happens through each barber&apos;s personal link
+        (<code className="rounded bg-gray-100 px-1 py-0.5">/book/&lt;barberId&gt;</code>). A barber
+        finds and shares their link from the admin console.
       </p>
       <Link
         href="/admin"

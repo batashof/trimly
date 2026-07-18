@@ -16,6 +16,14 @@ export class BarbersService {
     return this.prisma.barber.findMany({ orderBy: { createdAt: 'asc' } });
   }
 
+  /** Public listing — only barbers that are currently taking bookings. */
+  findAllActive(): Promise<Barber[]> {
+    return this.prisma.barber.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   async findOne(id: string): Promise<Barber> {
     const barber = await this.prisma.barber.findUnique({ where: { id } });
     if (!barber) {

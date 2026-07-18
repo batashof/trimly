@@ -5,6 +5,14 @@
  * real admin panel (roadmap step 6) can replace this with httpOnly cookies.
  */
 
+import type {
+  AvailabilityResponse,
+  BarberPublic,
+  BookingConfirmation,
+  CreateBookingInput,
+  ServicePublic,
+} from '@trimly/shared';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const TOKEN_KEY = 'trimly_token';
 
@@ -135,6 +143,21 @@ export const api = {
   dayOffs: {
     list: (barberId?: string) =>
       request<DayOff[]>(`/day-offs${barberId ? `?barberId=${barberId}` : ''}`),
+  },
+
+  // Public booking flow (no auth) — used by /book/[barberId].
+  public: {
+    barber: (id: string) => request<BarberPublic>(`/barbers/${id}`),
+    services: (id: string) => request<ServicePublic[]>(`/barbers/${id}/services`),
+    availability: (id: string, params: { date: string; serviceId: string }) =>
+      request<AvailabilityResponse>(
+        `/barbers/${id}/availability?date=${encodeURIComponent(params.date)}&serviceId=${encodeURIComponent(params.serviceId)}`,
+      ),
+    createBooking: (input: CreateBookingInput) =>
+      request<BookingConfirmation>('/bookings', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
   },
 };
 

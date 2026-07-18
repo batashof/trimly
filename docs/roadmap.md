@@ -4,7 +4,7 @@
 2. Backend: auth (JWT, ADMIN role), CRUD for barbers/services/schedule/days off
 3. Backend: slot availability logic + booking creation + double booking protection (`business-logic.md`)
 4. Backend: Telegram bot — registration via BotFather, webhook endpoint, deep link flow, sending confirmations (`notifications-telegram.md`)
-5. Frontend: public booking page (choose barber → service → slot → form → confirmation screen with Telegram button)
+5. Frontend: public booking page — reached via a per-barber link `/book/[barberId]` (no barber-picker; the barber shares their own link). Flow: service → slot → form → confirmation screen with Telegram button.
 6. Frontend: admin panel (booking list with filters, schedule management, services, barbers)
 7. Deployment: Vercel (web) + Render (api) + pinger for the api (`architecture.md`)
 8. UI polish, basic unit tests for slot logic and double booking

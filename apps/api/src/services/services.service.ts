@@ -20,6 +20,14 @@ export class ServicesService {
     });
   }
 
+  /** Public listing for the booking page — a barber's bookable services only. */
+  findActiveForBarber(barberId: string): Promise<Service[]> {
+    return this.prisma.service.findMany({
+      where: { barberId, isActive: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   async findOne(id: string): Promise<Service> {
     const service = await this.prisma.service.findUnique({ where: { id } });
     if (!service) {
