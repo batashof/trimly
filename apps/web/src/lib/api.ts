@@ -160,6 +160,19 @@ export const api = {
     }),
   me: () => request<AuthUser>('/auth/me'),
 
+  /** Barber self-registration, step 1 — always resolves (generic response). */
+  register: (email: string) =>
+    request<{ ok: true }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  /** Step 2 — set the password from the emailed token; returns a JWT (auto-login). */
+  confirmRegistration: (token: string, password: string) =>
+    request<LoginResult>('/auth/register/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    }),
+
   barbers: {
     /** The barber profile owned by the logged-in admin (admin *is* the barber). */
     me: () => request<Barber>('/barbers/me'),

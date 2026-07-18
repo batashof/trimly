@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   api,
   ApiError,
@@ -113,6 +114,12 @@ function LoginForm({ onSuccess }: { onSuccess: (user: AuthUser) => void }) {
         <PrimaryButton type="submit" disabled={loading} style={{ width: '100%' }}>
           {loading ? 'Signing in…' : 'Sign in'}
         </PrimaryButton>
+        <p className="text-center text-sm text-gray-500">
+          New barber?{' '}
+          <Link href="/register" className="font-medium text-gray-900 underline">
+            Register
+          </Link>
+        </p>
       </form>
     </main>
   );
