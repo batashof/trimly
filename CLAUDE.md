@@ -21,6 +21,8 @@ Start here: [trimly-project-plan.md](trimly-project-plan.md) — the project's e
 
 When you make a decision worth recording (a trade-off, a rejected alternative), add an entry to `docs/decisions-log.md` rather than only leaving it in code.
 
+**Keep the docs in sync with the code.** The `docs/` folder is the source of truth, so any change to project logic — data model, API contracts, auth/roles, slot/booking rules, deploy flow — must update the affected docs *in the same change*, not later. Before opening a PR, check whether your change contradicts anything in `docs/` (and `trimly-project-plan.md`) and update it, plus a `decisions-log.md` entry when the change reflects a decision. A PR that changes behaviour but leaves the docs describing the old behaviour is incomplete.
+
 ## Repo layout
 
 Monorepo — pnpm workspaces + Turborepo.
