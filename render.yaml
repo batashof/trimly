@@ -26,8 +26,10 @@ services:
       pnpm --filter @trimly/api build
     startCommand: pnpm --filter @trimly/api start:prod
     envVars:
+      # pnpm 11 (pinned in package.json "packageManager") requires Node >= 22.13,
+      # so build on Node 22. Also satisfies engines.node (>=20).
       - key: NODE_VERSION
-        value: "20"
+        value: "22"
       # Pooled Neon connection used by the app at runtime.
       - key: DATABASE_URL
         sync: false
